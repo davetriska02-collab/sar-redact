@@ -2,6 +2,8 @@
 
 A desktop tool for NHS GP practices to process Subject Access Requests (SARs). Detects and redacts third-party PII from patient record PDFs, with a reviewer workflow and full audit log.
 
+Built for use with **Medicus EPR** — handles PDF exports from the Medicus patient record directly.
+
 ---
 
 ## ⬇️ Download
@@ -23,7 +25,7 @@ No Python, no installation, no setup. Everything is bundled inside the single fi
 
 ## What It Does
 
-- Upload patient record PDFs (including RTF exports from clinical systems)
+- Upload patient record PDFs exported from Medicus (or any other clinical system)
 - Automatically detects names, NHS numbers, addresses, phone numbers, postcodes, emails, safeguarding flags, and more
 - Review detected items page-by-page: approve, reject, or draw manual redaction boxes
 - Finalise to generate redacted PDFs and a full audit log
