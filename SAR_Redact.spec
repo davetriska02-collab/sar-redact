@@ -1,0 +1,71 @@
+# -*- mode: python ; coding: utf-8 -*-
+import os
+block_cipher = None
+
+a = Analysis(
+    ['serve.py'],
+    pathex=['.'],
+    binaries=[],
+    datas=[
+        ('templates', 'templates'),
+        ('static', 'static'),
+    ],
+    hiddenimports=[
+        'flask',
+        'waitress',
+        'pymupdf',
+        'fitz',
+        'striprtf',
+        'striprtf.striprtf',
+        'werkzeug',
+        'werkzeug.security',
+        'jinja2',
+        'jinja2.ext',
+        'sar',
+        'sar.detector',
+        'sar.models',
+        'sar.name_detector',
+        'sar.nhs_patterns',
+        'sar.pdf_parser',
+        'sar.redactor',
+        'sar.redaction_log',
+        'sar.staff_list',
+        'sar.custom_words',
+        'sar.users',
+        'sar.risk_words',
+        'sar.keyword_scanner',
+        'sar.date_extractor',
+        'sar.evidence_extractor',
+        'sar.report_models',
+        'sar.report_templates',
+        'sar.report_store',
+        'sar.report_generator',
+    ],
+    hookspath=[],
+    runtime_hooks=[],
+    excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
+    noarchive=False,
+)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    [],
+    name='SAR Redact',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    icon=None,
+)

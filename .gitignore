@@ -9,3 +9,5 @@ venv/
 *.egg-info/
 cookies.txt
 *.sarpack
+dist/
+build/

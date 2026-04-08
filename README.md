@@ -6,29 +6,18 @@ A desktop tool for NHS GP practices to process Subject Access Requests (SARs). D
 
 ## ⬇️ Download
 
-**[⬇️ Click here to download SAR Redact v1.0](https://github.com/davetriska02-collab/sar-redact/releases/latest/download/SAR.Redact.zip)**
+**[⬇️ Click here to download SAR Redact v1.0](https://github.com/davetriska02-collab/sar-redact/releases/latest/download/SAR.Redact.exe)**
 
-Or visit the [Releases page](https://github.com/davetriska02-collab/sar-redact/releases) and download `SAR.Redact.zip`.
+Or visit the [Releases page](https://github.com/davetriska02-collab/sar-redact/releases) and download `SAR.Redact.exe`.
 
 ---
 
 ## Getting Started
 
-### Step 1 — Install Python (one-time setup)
+1. Download `SAR.Redact.exe` using the link above
+2. Double-click it — the app opens in your browser automatically
 
-SAR Redact needs Python to run. If you have not installed it before:
-
-1. Go to [python.org/downloads](https://www.python.org/downloads/) and click **Download Python**
-2. Run the installer — **tick the box that says "Add Python to PATH"** before clicking Install
-3. You only need to do this once
-
-### Step 2 — Download and run SAR Redact
-
-1. Download `SAR.Redact.zip` using the link above
-2. Extract (unzip) the folder somewhere convenient — e.g. your Desktop
-3. Double-click **`SAR Redact - Launch.bat`**
-
-The launcher sets everything else up automatically on first run and opens the app in your browser.
+No Python, no installation, no setup. Everything is bundled inside the single file.
 
 ---
 
@@ -45,8 +34,7 @@ The launcher sets everything else up automatically on first run and opens the ap
 ## Requirements
 
 - Windows 10 or 11
-- Python 3.10 or later (free — see Step 1 above)
-- Internet connection on first launch only (to download dependencies)
+- No Python or other software needed — everything is bundled
 
 ---
 

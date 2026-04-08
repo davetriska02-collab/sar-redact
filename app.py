@@ -17,6 +17,19 @@ from werkzeug.security import check_password_hash
 
 APP_VERSION = "1.0"
 SARPACK_FORMAT_VERSION = "1"
+
+# ── PyInstaller frozen-path detection ────────────────────────────────────────
+import sys as _sys
+import os as _os
+if getattr(_sys, 'frozen', False):
+    # Running as a PyInstaller bundle — templates/static live in _MEIPASS temp dir
+    _BASE_DIR = _sys._MEIPASS
+    # Data directories (uploads, output, data) must live next to the .exe, not in temp
+    _DATA_ROOT = _os.path.dirname(_sys.executable)
+else:
+    _BASE_DIR = _os.path.dirname(_os.path.abspath(__file__))
+    _DATA_ROOT = _os.path.dirname(_os.path.abspath(__file__))
+
 from sar.models import SARRequest, SubjectDetails, RedactionStatus, PIICategory, RedactionCandidate, DetectionSettings
 from sar.pdf_parser import extract_text_spans, render_page_image, get_page_count, get_full_page_text
 from sar.detector import detect_pii
@@ -33,10 +46,12 @@ from sar.users import (
     get_user_by_username,
 )
 
-app = Flask(__name__)
+app = Flask(__name__,
+    template_folder=os.path.join(_BASE_DIR, 'templates'),
+    static_folder=os.path.join(_BASE_DIR, 'static'))
 
 # Persistent secret key so sessions survive app restarts
-_SECRET_KEY_PATH = os.path.join(os.path.dirname(__file__), "data", ".secret_key")
+_SECRET_KEY_PATH = os.path.join(_DATA_ROOT, "data", ".secret_key")
 
 def _get_or_create_secret_key() -> bytes:
     os.makedirs(os.path.dirname(_SECRET_KEY_PATH), exist_ok=True)
@@ -82,9 +97,9 @@ def _emit(q: Queue, progress: float, step: str) -> None:
     """Push a progress event onto the job queue."""
     q.put({"progress": round(progress, 3), "step": step})
 
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output")
-SAR_DATA_DIR = os.path.join(os.path.dirname(__file__), "data", "sars")
+UPLOAD_DIR = os.path.join(_DATA_ROOT, "uploads")
+OUTPUT_DIR = os.path.join(_DATA_ROOT, "output")
+SAR_DATA_DIR = os.path.join(_DATA_ROOT, "data", "sars")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(SAR_DATA_DIR, exist_ok=True)
@@ -1893,8 +1908,8 @@ from sar.report_store import (
 from sar.evidence_extractor import extract_evidence
 from sar.report_generator import generate_report_pdf
 
-REPORT_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads", "reports")
-REPORT_OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "output", "reports")
+REPORT_UPLOAD_DIR = os.path.join(_DATA_ROOT, "uploads", "reports")
+REPORT_OUTPUT_DIR = os.path.join(_DATA_ROOT, "output", "reports")
 os.makedirs(REPORT_UPLOAD_DIR, exist_ok=True)
 os.makedirs(REPORT_OUTPUT_DIR, exist_ok=True)
 

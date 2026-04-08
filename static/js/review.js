@@ -19,6 +19,7 @@ const state = {
     _drag: null,
     selectedIndex: -1,   // Currently keyboard-selected candidate index
     viewMode: 'page',    // 'page' = per-page view, 'grouped' = grouped by text
+    redactedPagesOnly: false,  // when true, Prev/Next skip pages with no approved/auto_redact candidates
 };
 
 // UK GDPR / DPA 2018 exemption codes for redaction justification
@@ -184,19 +185,66 @@ async function pinCurrentFile() {
 }
 
 
+/** Returns true if the given 0-indexed page (in the current file) has at least one
+ *  approved or auto_redact candidate. Used by redactedPagesOnly mode. */
+function _pageHasRedactions(pageNum) {
+    return state.candidates.some(c =>
+        c.source_file === state.currentFile &&
+        c.page_num === pageNum &&
+        (c.status === 'approved' || c.status === 'auto_redact')
+    );
+}
+
 function prevPage() {
-    if (state.currentPage > 0) {
-        state.currentPage--;
-        state.selectedIndex = -1;
-        renderPage();
+    if (state.redactedPagesOnly) {
+        let p = state.currentPage - 1;
+        while (p >= 0 && !_pageHasRedactions(p)) p--;
+        if (p >= 0) {
+            state.currentPage = p;
+            state.selectedIndex = -1;
+            renderPage();
+        }
+    } else {
+        if (state.currentPage > 0) {
+            state.currentPage--;
+            state.selectedIndex = -1;
+            renderPage();
+        }
     }
 }
 
 function nextPage() {
-    if (state.currentPage < state.pageCount - 1) {
-        state.currentPage++;
-        state.selectedIndex = -1;
-        renderPage();
+    if (state.redactedPagesOnly) {
+        let p = state.currentPage + 1;
+        while (p < state.pageCount && !_pageHasRedactions(p)) p++;
+        if (p < state.pageCount) {
+            state.currentPage = p;
+            state.selectedIndex = -1;
+            renderPage();
+        }
+    } else {
+        if (state.currentPage < state.pageCount - 1) {
+            state.currentPage++;
+            state.selectedIndex = -1;
+            renderPage();
+        }
+    }
+}
+
+/** Toggle the "Redacted pages only" navigation mode. */
+function toggleRedactedPagesOnly() {
+    state.redactedPagesOnly = !state.redactedPagesOnly;
+    const btn = document.getElementById('btn-redacted-only');
+    if (btn) btn.classList.toggle('active', state.redactedPagesOnly);
+    // If activating, jump to the nearest redacted page (including current)
+    if (state.redactedPagesOnly && !_pageHasRedactions(state.currentPage)) {
+        let p = state.currentPage + 1;
+        while (p < state.pageCount && !_pageHasRedactions(p)) p++;
+        if (p < state.pageCount) {
+            state.currentPage = p;
+            state.selectedIndex = -1;
+            renderPage();
+        }
     }
 }
 
