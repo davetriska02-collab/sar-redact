@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}New SAR Request — SAR Redact{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/" class="page-header-back">← Dashboard</a>
+    <h1>New Subject Access Request</h1>
+    <div class="heading-rule"></div>
+    <p style="margin-top: 0.6rem;">Enter the data subject's details and upload the documents to be redacted.</p>
+</div>
+
+<form id="sar-form" enctype="multipart/form-data">
+    <div class="form-card">
+        <div class="form-card-title">Data Subject Details</div>
+        <div class="form-card-hint">Information matching these details will be <strong>excluded</strong> from redaction.</div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="first_name">First Name <span class="required">*</span></label>
+                <input type="text" id="first_name" name="first_name" required>
+            </div>
+            <div class="form-group">
+                <label for="last_name">Last Name <span class="required">*</span></label>
+                <input type="text" id="last_name" name="last_name" required>
+            </div>
+            <div class="form-group">
+                <label for="nhs_number">NHS Number</label>
+                <input type="text" id="nhs_number" name="nhs_number" placeholder="000 000 0000">
+            </div>
+            <div class="form-group">
+                <label for="date_of_birth">Date of Birth</label>
+                <input type="text" id="date_of_birth" name="date_of_birth" placeholder="DD/MM/YYYY">
+            </div>
+            <div class="form-group form-group-wide">
+                <label for="address">Address</label>
+                <input type="text" id="address" name="address" placeholder="Full address">
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="text" id="phone" name="phone">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email">
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 1.25rem;">
+            <label>Alternative Names / Aliases</label>
+            <div id="aliases-container">
+                <div class="alias-row">
+                    <input type="text" class="alias-input" placeholder="e.g. maiden name, preferred name">
+                    <button type="button" class="btn-add-alias" onclick="addAliasRow()">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ornament">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 76 36" class="ornament-scissors" style="image-rendering:pixelated;image-rendering:crisp-edges;">
+          <!-- Scissors pivot (centre) -->
+          <rect x="34" y="14" width="4" height="4" fill="#b8965f"/>
+          <rect x="38" y="14" width="4" height="4" fill="#b8965f"/>
+          <rect x="34" y="18" width="4" height="4" fill="#b8965f"/>
+          <rect x="38" y="18" width="4" height="4" fill="#b8965f"/>
+          <!-- Left blade (goes up-left from pivot) -->
+          <rect x="26" y="10" width="4" height="4" fill="#9a8b7a"/>
+          <rect x="22" y="6"  width="4" height="4" fill="#9a8b7a"/>
+          <rect x="18" y="2"  width="4" height="4" fill="#9a8b7a"/>
+          <!-- Left blade tip circle -->
+          <rect x="12" y="0"  width="8" height="4" fill="#9a8b7a"/>
+          <rect x="10" y="4"  width="8" height="4" fill="#9a8b7a"/>
+          <rect x="12" y="8"  width="8" height="4" fill="#9a8b7a"/>
+          <!-- Left blade (goes down-left from pivot) -->
+          <rect x="26" y="22" width="4" height="4" fill="#9a8b7a"/>
+          <rect x="22" y="26" width="4" height="4" fill="#9a8b7a"/>
+          <rect x="18" y="30" width="4" height="4" fill="#9a8b7a"/>
+          <!-- Left handle loop -->
+          <rect x="10" y="28" width="8" height="4" fill="#9a8b7a"/>
+          <rect x="8"  y="24" width="4" height="8" fill="#9a8b7a"/>
+          <rect x="12" y="32" width="8" height="4" fill="#9a8b7a"/>
+          <!-- Right blade (goes up-right from pivot) -->
+          <rect x="46" y="10" width="4" height="4" fill="#9a8b7a"/>
+          <rect x="50" y="6"  width="4" height="4" fill="#9a8b7a"/>
+          <rect x="54" y="2"  width="4" height="4" fill="#9a8b7a"/>
+          <!-- Right blade tip circle -->
+          <rect x="56" y="0"  width="8" height="4" fill="#9a8b7a"/>
+          <rect x="58" y="4"  width="8" height="4" fill="#9a8b7a"/>
+          <rect x="56" y="8"  width="8" height="4" fill="#9a8b7a"/>
+          <!-- Right blade (goes down-right from pivot) -->
+          <rect x="46" y="22" width="4" height="4" fill="#9a8b7a"/>
+          <rect x="50" y="26" width="4" height="4" fill="#9a8b7a"/>
+          <rect x="54" y="30" width="4" height="4" fill="#9a8b7a"/>
+          <!-- Right handle loop -->
+          <rect x="58" y="28" width="8" height="4" fill="#9a8b7a"/>
+          <rect x="64" y="24" width="4" height="8" fill="#9a8b7a"/>
+          <rect x="56" y="32" width="8" height="4" fill="#9a8b7a"/>
+        </svg>
+    </div>
+
+    <div class="form-card">
+        <div class="form-card-title">Documents</div>
+        <div class="form-card-hint">Upload files to process. Supports PDF, TIF, RTF, TXT, PNG, JPG, HTML, CDAX, or a ZIP containing any mix.</div>
+
+        <div class="file-drop-zone" id="file-drop-zone">
+            <input type="file" id="pdf_files" name="pdf_files" accept=".pdf,.tif,.tiff,.rtf,.txt,.zip,.png,.jpg,.jpeg,.html,.htm,.cdax" multiple required>
+            <div class="file-drop-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 58" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;">
+                  <!-- Doc border -->
+                  <rect x="0" y="0" width="36" height="3" fill="#9a8b7a"/>
+                  <rect x="0" y="55" width="48" height="3" fill="#9a8b7a"/>
+                  <rect x="0" y="3" width="3" height="52" fill="#9a8b7a"/>
+                  <rect x="45" y="12" width="3" height="43" fill="#9a8b7a"/>
+                  <!-- Dog-ear -->
+                  <rect x="36" y="0" width="3" height="3" fill="#9a8b7a"/>
+                  <rect x="39" y="3" width="3" height="3" fill="#9a8b7a"/>
+                  <rect x="42" y="6" width="3" height="3" fill="#9a8b7a"/>
+                  <rect x="45" y="9" width="3" height="3" fill="#9a8b7a"/>
+                  <rect x="36" y="3" width="3" height="9" fill="#ddd4c7"/>
+                  <rect x="39" y="6" width="3" height="6" fill="#ddd4c7"/>
+                  <rect x="42" y="9" width="3" height="3" fill="#ddd4c7"/>
+                  <!-- Paper -->
+                  <rect x="3" y="3" width="33" height="52" fill="#f2ede6"/>
+                  <rect x="36" y="12" width="9" height="43" fill="#f2ede6"/>
+                  <!-- Text lines -->
+                  <rect x="6" y="8"  width="24" height="3" fill="#c8bdb2"/>
+                  <rect x="6" y="16" width="18" height="3" fill="#c8bdb2"/>
+                  <rect x="6" y="24" width="30" height="3" fill="#c8bdb2"/>
+                  <rect x="6" y="32" width="12" height="3" fill="#c8bdb2"/>
+                  <rect x="6" y="40" width="24" height="3" fill="#c8bdb2"/>
+                  <!-- Upload arrow -->
+                  <rect x="21" y="44" width="6" height="9" fill="#b8965f"/>
+                  <rect x="18" y="47" width="3" height="3" fill="#b8965f"/>
+                  <rect x="27" y="47" width="3" height="3" fill="#b8965f"/>
+                  <rect x="15" y="50" width="3" height="3" fill="#b8965f"/>
+                  <rect x="30" y="50" width="3" height="3" fill="#b8965f"/>
+                </svg>
+            </div>
+            <div class="file-drop-label"><strong>Choose files</strong> or drag and drop</div>
+            <div class="file-drop-sub">PDF, TIF, RTF, TXT, PNG, JPG, HTML, CDAX, or ZIP &middot; Multiple files allowed</div>
+        </div>
+        <div id="file-list" class="file-list"></div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="submit-btn">Process SAR</button>
+        <a href="/" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+<div id="processing-overlay" class="overlay hidden">
+    <div class="overlay-content">
+        <h2>Processing Documents…</h2>
+        <p id="overlay-step">Uploading files…</p>
+        <div class="overlay-progress">
+            <div class="overlay-progress-bar" id="overlay-bar" style="width:0%"></div>
+        </div>
+        <p class="overlay-pct" id="overlay-pct">0%</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — SAR Redact{% endblock %}
+
+{% block main_class %}container-wide{% endblock %}
+
+{% block content %}
+<div class="dash-hero">
+    <div class="dash-hero-text">
+        <h1>Subject Access Requests</h1>
+        <div class="heading-rule"></div>
+        <div class="dash-hero-stats">
+            <div class="hero-stat">
+                <span class="hero-stat-value">{{ total_requests }}</span>
+                <span class="hero-stat-label">Total</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value hero-stat-reviewing">{{ reviewing_count }}</span>
+                <span class="hero-stat-label">Reviewing</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value hero-stat-complete">{{ complete_count }}</span>
+                <span class="hero-stat-label">Complete</span>
+            </div>
+            {% if overdue_count > 0 %}
+            <div class="hero-stat">
+                <span class="hero-stat-value hero-stat-overdue">{{ overdue_count }}</span>
+                <span class="hero-stat-label">Overdue</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="dash-hero-right">
+        <div class="dash-hero-art">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 102" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;">
+              <!-- Back doc shadow -->
+              <rect x="15" y="99" width="65" height="3" fill="rgba(80,60,40,0.10)"/>
+              <!-- Back doc border -->
+              <rect x="13" y="10" width="75" height="5" fill="#9a8b7a"/>
+              <rect x="13" y="95" width="75" height="5" fill="#9a8b7a"/>
+              <rect x="13" y="15" width="5" height="80" fill="#9a8b7a"/>
+              <rect x="83" y="15" width="5" height="80" fill="#9a8b7a"/>
+              <!-- Back doc paper -->
+              <rect x="18" y="15" width="65" height="80" fill="#f5f0e8"/>
+              <!-- Back doc text lines -->
+              <rect x="23" y="20" width="45" height="5" fill="#ddd4c7"/>
+              <rect x="23" y="40" width="30" height="5" fill="#ddd4c7"/>
+              <rect x="23" y="60" width="15" height="5" fill="#ddd4c7"/>
+              <rect x="23" y="80" width="40" height="5" fill="#ddd4c7"/>
+              <!-- Back doc redacted bars (muted gold) -->
+              <rect x="23" y="30" width="50" height="5" fill="#cca870"/>
+              <rect x="23" y="50" width="25" height="5" fill="#cca870"/>
+              <rect x="23" y="70" width="45" height="5" fill="#cca870"/>
+              <!-- Front doc shadow -->
+              <rect x="3" y="88" width="65" height="3" fill="rgba(80,60,40,0.18)"/>
+              <!-- Front doc border -->
+              <rect x="0" y="0" width="75" height="5" fill="#6b5d50"/>
+              <rect x="0" y="85" width="75" height="5" fill="#6b5d50"/>
+              <rect x="0" y="5" width="5" height="80" fill="#6b5d50"/>
+              <rect x="70" y="5" width="5" height="80" fill="#6b5d50"/>
+              <!-- Front doc paper -->
+              <rect x="5" y="5" width="65" height="80" fill="#f2ede6"/>
+              <!-- Front doc text lines -->
+              <rect x="10" y="10" width="45" height="5" fill="#c8bdb2"/>
+              <rect x="10" y="30" width="30" height="5" fill="#c8bdb2"/>
+              <rect x="10" y="50" width="15" height="5" fill="#c8bdb2"/>
+              <rect x="10" y="70" width="40" height="5" fill="#c8bdb2"/>
+              <!-- Front doc gold redacted bars -->
+              <rect x="10" y="20" width="50" height="5" fill="#b8965f"/>
+              <rect x="10" y="40" width="25" height="5" fill="#b8965f"/>
+              <rect x="10" y="60" width="45" height="5" fill="#b8965f"/>
+            </svg>
+        </div>
+        <a href="/new" class="btn btn-primary">+ New SAR</a>
+    </div>
+</div>
+
+{% if current_user.role == 'admin' %}
+<div class="dash-import-bar">
+    <button class="btn btn-secondary" onclick="showImportModal()">&#8599; Import SAR</button>
+</div>
+{% endif %}
+
+{% if sar_summaries %}
+<div class="dash-filter-bar">
+    <input type="text" id="dash-search" class="dash-search-input" placeholder="Search by subject name or reference…" oninput="filterTable()">
+    <select id="dash-status-filter" class="toolbar-select" onchange="filterTable()">
+        <option value="all">All</option>
+        <option value="new">New</option>
+        <option value="in_review">In Review</option>
+        <option value="ready_for_signoff">Ready for Sign-off</option>
+        <option value="complete">Complete</option>
+    </select>
+</div>
+{% endif %}
+
+<!-- Export Modal -->
+<div id="export-overlay" class="overlay hidden">
+    <div class="overlay-content confirm-modal">
+        <h2>Export SAR for Handover</h2>
+        <p style="margin-bottom:1rem;">This will download a <strong>.sarpack</strong> file containing the SAR data and all uploaded documents. The recipient can import it into their own copy of SAR Redact to continue reviewing.</p>
+        <div class="info-box" style="background:var(--gold-dim,#fdf6e3);border:1px solid var(--gold);border-radius:6px;padding:1rem;margin-bottom:1.25rem;font-size:0.875rem;">
+            <strong>&#9993; Send via NHSmail</strong><br>
+            This file contains patient data. You <strong>must</strong> send it using a secure <strong>@nhs.net</strong> email address to another <strong>@nhs.net</strong> address. Do not send via personal or non-NHS email.
+        </div>
+        <p id="export-subject-name" style="color:var(--text-secondary);font-size:0.875rem;margin-bottom:1.25rem;"></p>
+        <div class="confirm-actions">
+            <button class="btn btn-secondary" onclick="hideExportModal()">Cancel</button>
+            <a id="export-download-link" class="btn btn-primary" onclick="hideExportModal()">Download .sarpack</a>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div id="import-overlay" class="overlay hidden">
+    <div class="overlay-content confirm-modal">
+        <h2>Import SAR</h2>
+        <p style="margin-bottom:0.75rem;">Select a <strong>.sarpack</strong> file received via NHSmail. The SAR will be added to your dashboard so you can continue reviewing from where it was left off.</p>
+        <div class="info-box" style="background:var(--gold-dim,#fdf6e3);border:1px solid var(--gold);border-radius:6px;padding:1rem;margin-bottom:1.25rem;font-size:0.875rem;">
+            <strong>&#9888; Only import files received via NHSmail</strong><br>
+            Only open .sarpack files sent to you from a trusted <strong>@nhs.net</strong> address. Do not import files from unknown sources.
+        </div>
+        <input type="file" id="import-file-input" accept=".sarpack,.zip" style="margin-bottom:1rem;width:100%;">
+        <div id="import-conflict-warning" class="hidden" style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:1rem;margin-bottom:1rem;font-size:0.875rem;"></div>
+        <div id="import-error" class="hidden" style="color:var(--red);font-size:0.875rem;margin-bottom:0.75rem;"></div>
+        <div class="confirm-actions">
+            <button class="btn btn-secondary" onclick="hideImportModal()">Cancel</button>
+            <button class="btn btn-primary" id="import-btn" onclick="doImport(false)">Import</button>
+        </div>
+    </div>
+</div>
+
+<div class="sar-table-card">
+    {% if sar_summaries %}
+    <table class="sar-table" id="sar-table">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Summary</th>
+                <th>Deadline</th>
+                <th>Workflow</th>
+                <th>Allocated To</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sar_summaries %}
+            <tr data-name="{{ (s.sar.subject.full_name or (s.sar.subject.first_name + ' ' + s.sar.subject.last_name))|lower }}"
+                data-ref="{{ s.sar.id|lower }}"
+                data-status="{{ s.sar.status }}"
+                data-workflow="{{ s.sar.workflow_status }}">
+                <td>
+                    <div class="sar-subject-name">{{ s.sar.subject.full_name or (s.sar.subject.first_name + ' ' + s.sar.subject.last_name) }}</div>
+                    <div class="sar-subject-meta">{{ s.sar.id }} · {{ s.sar.created_at | fdate }}</div>
+                </td>
+                <td>
+                    <span class="sar-meta-text">{{ s.file_count }} file{{ 's' if s.file_count != 1 else '' }}</span>
+                    {% if s.auto or s.flagged %}
+                    <div class="detection-counts" style="margin-top:0.25rem;">
+                        {% if s.auto %}<span class="det-pill det-pill-auto">{{ s.auto }} auto</span>{% endif %}
+                        {% if s.flagged %}<span class="det-pill det-pill-flagged">{{ s.flagged }} flagged</span>{% endif %}
+                    </div>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if s.sar.status != 'complete' %}
+                        {% if s.sar.clock_paused %}
+                        <span class="deadline-paused">PAUSED</span>
+                        {% else %}
+                        <span class="deadline-indicator {% if s.days_remaining < 0 %}deadline-overdue{% elif s.days_remaining <= 5 %}deadline-urgent{% elif s.days_remaining <= 10 %}deadline-soon{% endif %}">
+                            {% if s.days_remaining < 0 %}
+                                {{ (s.days_remaining * -1) }}d overdue
+                            {% elif s.days_remaining == 0 %}
+                                Due today
+                            {% else %}
+                                {{ s.days_remaining }}d left
+                            {% endif %}
+                        </span>
+                        {% endif %}
+                        {% if s.sar.total_paused_days > 0 and not s.sar.clock_paused %}
+                        <span class="deadline-paused-note">+{{ s.sar.total_paused_days }}d paused</span>
+                        {% endif %}
+                    {% else %}
+                    <span class="sar-meta-text">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="workflow-pill workflow-{{ s.sar.workflow_status }}">
+                        {% if s.sar.workflow_status == 'new' %}New
+                        {% elif s.sar.workflow_status == 'in_review' %}In Review
+                        {% elif s.sar.workflow_status == 'ready_for_signoff' %}Ready for Sign-off
+                        {% elif s.sar.workflow_status == 'complete' %}Complete
+                        {% else %}{{ s.sar.workflow_status|title }}{% endif %}
+                    </span>
+                </td>
+                <td>
+                    {% if s.sar.allocated_to_name %}
+                    <span class="sar-meta-text">{{ s.sar.allocated_to_name }}</span>
+                    {% else %}
+                    <span class="sar-meta-text" style="color:var(--text-tertiary);">—</span>
+                    {% endif %}
+                    {% if current_user.role == 'admin' %}
+                    <div class="allocate-ui">
+                        <select class="toolbar-select allocate-select"
+                                onchange="allocateSar('{{ s.sar.id }}', this.value)">
+                            <option value="">— Unallocated —</option>
+                            {% for gp in gp_users %}
+                            <option value="{{ gp.id }}"
+                                    {% if gp.id == s.sar.allocated_to %}selected{% endif %}>
+                                {{ gp.display_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                </td>
+                <td style="display:flex;gap:0.4rem;align-items:center;justify-content:flex-end;">
+                    <a href="/review/{{ s.sar.id }}" class="btn-sm {% if s.sar.status == 'complete' %}btn-sm-reject{% else %}btn-sm-primary{% endif %}">
+                        {% if s.sar.status == 'complete' %}View{% else %}Review{% endif %}
+                    </a>
+                    {% if current_user.role == 'admin' %}
+                    {% if s.sar.status != 'complete' %}
+                        {% if s.sar.clock_paused %}
+                        <button class="btn-sm btn-sm-approve" title="Resume clock"
+                                onclick="resumeClock('{{ s.sar.id }}')">Resume</button>
+                        {% else %}
+                        <button class="btn-sm btn-sm-page" title="Pause clock"
+                                onclick="pauseClock('{{ s.sar.id }}')">Pause</button>
+                        {% endif %}
+                    {% endif %}
+                    <button class="btn-sm" title="Export for handover"
+                            onclick="showExportModal('{{ s.sar.id }}', '{{ s.sar.subject.full_name or (s.sar.subject.first_name + ' ' + s.sar.subject.last_name) }}')">Export</button>
+                    <button class="btn-sm btn-sm-delete" title="Delete SAR"
+                            onclick="deleteSar('{{ s.sar.id }}', '{{ s.sar.subject.full_name or (s.sar.subject.first_name + ' ' + s.sar.subject.last_name) }}')">&#x1F5D1;</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <p class="dash-no-results hidden" id="dash-no-results" style="text-align:center;padding:2rem;color:var(--text-tertiary);">No matching requests.</p>
+    {% else %}
+    <div class="dash-empty">
+        <div class="dash-empty-art">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 116" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;margin:0 auto;">
+              <!-- Shadow -->
+              <rect x="6" y="108" width="78" height="6" fill="rgba(80,60,40,0.09)"/>
+              <!-- Border -->
+              <rect x="0" y="0" width="90" height="6" fill="#b8a895"/>
+              <rect x="0" y="102" width="90" height="6" fill="#b8a895"/>
+              <rect x="0" y="6" width="6" height="96" fill="#b8a895"/>
+              <rect x="84" y="6" width="6" height="96" fill="#b8a895"/>
+              <!-- Paper -->
+              <rect x="6" y="6" width="78" height="96" fill="#f7f3ee"/>
+              <!-- Text lines (muted — empty state) -->
+              <rect x="12" y="14" width="54" height="6" fill="#e0d8d0"/>
+              <rect x="12" y="38" width="36" height="6" fill="#e0d8d0"/>
+              <rect x="12" y="62" width="18" height="6" fill="#e0d8d0"/>
+              <rect x="12" y="86" width="42" height="6" fill="#e0d8d0"/>
+              <!-- Redacted bars (very muted gold) -->
+              <rect x="12" y="26" width="66" height="6" fill="#e2c98a"/>
+              <rect x="12" y="50" width="42" height="6" fill="#e2c98a"/>
+              <rect x="12" y="74" width="54" height="6" fill="#e2c98a"/>
+            </svg>
+        </div>
+        <h3>No requests yet</h3>
+        <p>Create your first Subject Access Request to get started.</p>
+        <a href="/new" class="btn btn-primary">New SAR Request</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filterTable() {
+    const query = document.getElementById('dash-search').value.toLowerCase().trim();
+    const status = document.getElementById('dash-status-filter').value;
+    const rows = document.querySelectorAll('#sar-table tbody tr');
+    let visible = 0;
+    rows.forEach(row => {
+        const name = row.dataset.name || '';
+        const ref = row.dataset.ref || '';
+        const workflow = row.dataset.workflow || '';
+        const matchesSearch = !query || name.includes(query) || ref.includes(query);
+        const matchesStatus = status === 'all' || workflow === status;
+        const show = matchesSearch && matchesStatus;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+    });
+    const noResults = document.getElementById('dash-no-results');
+    if (noResults) {
+        noResults.classList.toggle('hidden', visible > 0);
+    }
+}
+
+// ── Export ────────────────────────────────────────────────────────────────
+function showExportModal(sarId, subjectName) {
+    document.getElementById('export-subject-name').textContent = 'Subject: ' + subjectName + ' · Reference: ' + sarId;
+    document.getElementById('export-download-link').href = `/api/sar/${sarId}/export`;
+    document.getElementById('export-overlay').classList.remove('hidden');
+}
+function hideExportModal() {
+    document.getElementById('export-overlay').classList.add('hidden');
+}
+document.getElementById('export-overlay').addEventListener('click', function(e) {
+    if (e.target === this) hideExportModal();
+});
+
+// ── Import ────────────────────────────────────────────────────────────────
+function showImportModal() {
+    document.getElementById('import-file-input').value = '';
+    document.getElementById('import-conflict-warning').classList.add('hidden');
+    document.getElementById('import-error').classList.add('hidden');
+    document.getElementById('import-btn').textContent = 'Import';
+    document.getElementById('import-btn').onclick = () => doImport(false);
+    document.getElementById('import-overlay').classList.remove('hidden');
+}
+function hideImportModal() {
+    document.getElementById('import-overlay').classList.add('hidden');
+}
+document.getElementById('import-overlay').addEventListener('click', function(e) {
+    if (e.target === this) hideImportModal();
+});
+
+function _fmtDate(iso) {
+    if (!iso) return 'unknown';
+    try { return new Date(iso).toLocaleString('en-GB'); } catch { return iso; }
+}
+
+async function doImport(force) {
+    const input = document.getElementById('import-file-input');
+    const errorEl = document.getElementById('import-error');
+    const conflictEl = document.getElementById('import-conflict-warning');
+    errorEl.classList.add('hidden');
+    conflictEl.classList.add('hidden');
+
+    if (!input.files.length) {
+        errorEl.textContent = 'Please select a .sarpack file.';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    const form = new FormData();
+    form.append('sarpack', input.files[0]);
+    const url = force ? '/api/sar/import/force' : '/api/sar/import';
+    const btn = document.getElementById('import-btn');
+    btn.disabled = true;
+    btn.textContent = 'Importing…';
+
+    try {
+        const resp = await fetch(url, { method: 'POST', body: form });
+        const data = await resp.json();
+
+        if (resp.status === 409 && data.conflict) {
+            // Version conflict
+            let msg = '';
+            if (data.conflict === 'older') {
+                msg = `<strong>&#9888; Warning: this file is older than your current version.</strong><br>
+                    Your copy was last modified <strong>${_fmtDate(data.existing_modified)}</strong>.<br>
+                    The file you are importing was last modified <strong>${_fmtDate(data.incoming_modified)}</strong>.<br>
+                    Importing will overwrite your newer version. Are you sure?`;
+            } else {
+                msg = `<strong>This SAR already exists on your system with the same version.</strong><br>
+                    Last modified: ${_fmtDate(data.existing_modified)}.<br>
+                    Importing again will overwrite it. Continue?`;
+            }
+            conflictEl.innerHTML = msg;
+            conflictEl.classList.remove('hidden');
+            btn.textContent = 'Import Anyway';
+            btn.disabled = false;
+            btn.onclick = () => doImport(true);
+            return;
+        }
+
+        if (!resp.ok) {
+            errorEl.textContent = data.error || 'Import failed.';
+            errorEl.classList.remove('hidden');
+            btn.disabled = false;
+            btn.textContent = 'Import';
+            return;
+        }
+
+        hideImportModal();
+        window.location.reload();
+    } catch (err) {
+        errorEl.textContent = 'Network error: ' + err.message;
+        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Import';
+    }
+}
+
+async function deleteSar(sarId, subjectName) {
+    if (!confirm(`Permanently delete the SAR for "${subjectName}"?\n\nThis will remove all uploaded files and cannot be undone.`)) return;
+    const resp = await fetch(`/api/sar/${sarId}/delete`, { method: 'POST' });
+    if (resp.ok) {
+        const row = document.querySelector(`tr[data-ref="${sarId.toLowerCase()}"]`);
+        if (row) row.remove();
+        window.location.reload();
+    } else {
+        const err = await resp.json().catch(() => ({}));
+        alert('Could not delete: ' + (err.error || 'Unknown error'));
+    }
+}
+
+async function allocateSar(sarId, userId) {
+    const resp = await fetch(`/api/sar/${sarId}/allocate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+    });
+    if (resp.ok) {
+        window.location.reload();
+    } else {
+        const err = await resp.json().catch(() => ({}));
+        alert('Could not allocate: ' + (err.error || 'Unknown error'));
+    }
+}
+
+async function pauseClock(sarId) {
+    const reason = prompt('Reason for pausing the clock (e.g. awaiting ID verification):');
+    if (!reason) return;
+    const resp = await fetch(`/api/sar/${sarId}/pause-clock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+    });
+    if (resp.ok) {
+        window.location.reload();
+    } else {
+        const err = await resp.json().catch(() => ({}));
+        alert('Could not pause clock: ' + (err.error || 'Unknown error'));
+    }
+}
+
+async function resumeClock(sarId) {
+    if (!confirm('Resume the statutory clock?')) return;
+    const resp = await fetch(`/api/sar/${sarId}/resume-clock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+    });
+    if (resp.ok) {
+        window.location.reload();
+    } else {
+        const err = await resp.json().catch(() => ({}));
+        alert('Could not resume clock: ' + (err.error || 'Unknown error'));
+    }
+}
+</script>
+{% endblock %}

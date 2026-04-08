@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}New Medical Report — SAR Redact{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/reports" class="page-header-back">&larr; Reports</a>
+    <h1>New Medical Report</h1>
+    <div class="heading-rule"></div>
+    <p style="margin-top: 0.6rem;">Select a report template, enter the patient's details, and upload their medical records.</p>
+</div>
+
+<form id="report-form" enctype="multipart/form-data">
+    <div class="form-card">
+        <div class="form-card-title">Report Template</div>
+        <div class="form-card-hint">Choose the type of report to generate.</div>
+        <div class="form-group">
+            <label for="template_id">Template <span class="required">*</span></label>
+            <select id="template_id" name="template_id" required>
+                <option value="">— Select a template —</option>
+                {% for t in templates %}
+                <option value="{{ t.id }}">{{ t.name }}{% if t.description %} — {{ t.description }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <div class="form-card-title">Patient Details</div>
+        <div class="form-card-hint">Information about the patient whose records are being reviewed.</div>
+        <div class="form-grid">
+            <div class="form-group form-group-wide">
+                <label for="full_name">Patient Full Name <span class="required">*</span></label>
+                <input type="text" id="full_name" name="full_name" required>
+            </div>
+            <div class="form-group">
+                <label for="date_of_birth">Date of Birth</label>
+                <input type="text" id="date_of_birth" name="date_of_birth" placeholder="DD/MM/YYYY">
+            </div>
+            <div class="form-group">
+                <label for="nhs_number">NHS Number</label>
+                <input type="text" id="nhs_number" name="nhs_number" placeholder="000 000 0000">
+            </div>
+            <div class="form-group form-group-wide">
+                <label for="address">Address</label>
+                <input type="text" id="address" name="address">
+            </div>
+            <div class="form-group">
+                <label for="gp_name">GP Name</label>
+                <input type="text" id="gp_name" name="gp_name">
+            </div>
+            <div class="form-group">
+                <label for="gp_practice">Practice</label>
+                <input type="text" id="gp_practice" name="gp_practice">
+            </div>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <div class="form-card-title">Medical Records</div>
+        <div class="form-card-hint">Upload the patient's medical records. Supports PDF, TIF, RTF, TXT, PNG, JPG, HTML, CDAX, or a ZIP containing any mix.</div>
+
+        <div class="file-drop-zone" id="file-drop-zone">
+            <input type="file" id="pdf_files" name="pdf_files" accept=".pdf,.tif,.tiff,.rtf,.txt,.zip,.png,.jpg,.jpeg,.html,.htm,.cdax" multiple required>
+            <div class="file-drop-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 58" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;">
+                  <rect x="0" y="0" width="36" height="3" fill="#9a8b7a"/>
+                  <rect x="0" y="55" width="48" height="3" fill="#9a8b7a"/>
+                  <rect x="0" y="3" width="3" height="52" fill="#9a8b7a"/>
+                  <rect x="45" y="12" width="3" height="43" fill="#9a8b7a"/>
+                  <rect x="36" y="0" width="3" height="3" fill="#9a8b7a"/>
+                  <rect x="39" y="3" width="3" height="3" fill="#9a8b7a"/>
+                  <rect x="42" y="6" width="3" height="3" fill="#9a8b7a"/>
+                  <rect x="45" y="9" width="3" height="3" fill="#9a8b7a"/>
+                  <rect x="36" y="3" width="3" height="9" fill="#ddd4c7"/>
+                  <rect x="39" y="6" width="3" height="6" fill="#ddd4c7"/>
+                  <rect x="42" y="9" width="3" height="3" fill="#ddd4c7"/>
+                  <rect x="3" y="3" width="33" height="52" fill="#f2ede6"/>
+                  <rect x="36" y="12" width="9" height="43" fill="#f2ede6"/>
+                  <rect x="6" y="8"  width="24" height="3" fill="#c8bdb2"/>
+                  <rect x="6" y="16" width="18" height="3" fill="#c8bdb2"/>
+                  <rect x="6" y="24" width="30" height="3" fill="#c8bdb2"/>
+                  <rect x="6" y="32" width="12" height="3" fill="#c8bdb2"/>
+                  <rect x="6" y="40" width="24" height="3" fill="#c8bdb2"/>
+                  <rect x="21" y="44" width="6" height="9" fill="#b8965f"/>
+                  <rect x="18" y="47" width="3" height="3" fill="#b8965f"/>
+                  <rect x="27" y="47" width="3" height="3" fill="#b8965f"/>
+                  <rect x="15" y="50" width="3" height="3" fill="#b8965f"/>
+                  <rect x="30" y="50" width="3" height="3" fill="#b8965f"/>
+                </svg>
+            </div>
+            <div class="file-drop-label"><strong>Choose files</strong> or drag and drop</div>
+            <div class="file-drop-sub">PDF, TIF, RTF, TXT, PNG, JPG, HTML, CDAX, or ZIP &middot; Multiple files allowed</div>
+        </div>
+        <div id="file-list" class="file-list"></div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="submit-btn">Process Records</button>
+        <a href="/reports" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+<div id="processing-overlay" class="overlay hidden">
+    <div class="overlay-content">
+        <h2>Processing Records&hellip;</h2>
+        <p id="overlay-step">Uploading files…</p>
+        <div class="overlay-progress">
+            <div class="overlay-progress-bar" id="overlay-bar" style="width:0%"></div>
+        </div>
+        <p class="overlay-pct" id="overlay-pct">0%</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('report-form');
+    const fileInput = document.getElementById('pdf_files');
+    const fileList = document.getElementById('file-list');
+    const overlay = document.getElementById('processing-overlay');
+    const dropZone = document.getElementById('file-drop-zone');
+
+    // File list display
+    fileInput.addEventListener('change', () => {
+        fileList.innerHTML = '';
+        for (const f of fileInput.files) {
+            const div = document.createElement('div');
+            div.className = 'file-list-item';
+            div.textContent = `${f.name} (${(f.size/1024).toFixed(0)} KB)`;
+            fileList.appendChild(div);
+        }
+    });
+
+    // Drag and drop
+    ['dragenter', 'dragover'].forEach(e => {
+        dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('drag-over'); });
+    });
+    ['dragleave', 'drop'].forEach(e => {
+        dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('drag-over'); });
+    });
+    dropZone.addEventListener('drop', ev => {
+        fileInput.files = ev.dataTransfer.files;
+        fileInput.dispatchEvent(new Event('change'));
+    });
+
+    const stepEl = document.getElementById('overlay-step');
+    const barEl  = document.getElementById('overlay-bar');
+    const pctEl  = document.getElementById('overlay-pct');
+
+    function setProgress(pct, step) {
+        const p = Math.round(pct * 100);
+        barEl.style.width = p + '%';
+        pctEl.textContent = p + '%';
+        if (step) stepEl.textContent = step;
+    }
+
+    // Submit
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        overlay.classList.remove('hidden');
+        setProgress(0, 'Uploading files…');
+
+        const fd = new FormData(form);
+        try {
+            // Phase 1: upload & start job
+            const res = await fetch('/api/reports/create', { method: 'POST', body: fd });
+            const init = await res.json();
+            if (init.error) throw new Error(init.error);
+
+            // Phase 2: stream progress
+            await new Promise((resolve, reject) => {
+                const es = new EventSource(`/api/job/${init.job_id}/stream`);
+                es.onmessage = (ev) => {
+                    const data = JSON.parse(ev.data);
+                    if (data.error) { es.close(); reject(new Error(data.error)); }
+                    else if (data.done) { setProgress(1, 'Complete!'); es.close(); resolve(data); }
+                    else { setProgress(data.progress || 0, data.step || ''); }
+                };
+                es.onerror = () => { es.close(); reject(new Error('Connection lost')); };
+            }).then(data => {
+                window.location.href = `/reports/${data.report_id}`;
+            });
+
+        } catch (err) {
+            alert('Error: ' + err.message);
+            overlay.classList.add('hidden');
+        }
+    });
+});
+</script>
+{% endblock %}

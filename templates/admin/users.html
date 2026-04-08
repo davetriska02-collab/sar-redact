@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}User Management — SAR Redact{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>User Management</h1>
+    <div class="heading-rule"></div>
+</div>
+
+<!-- Create User Form -->
+<div class="form-card">
+    <div class="form-card-title">Add New User</div>
+
+    {% if errors %}
+    <ul class="errors-list">
+        {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+
+    <form method="POST" action="/admin/users/create">
+        <div class="form-inline-row">
+            <div class="form-group">
+                <label for="display_name">Full name</label>
+                <input type="text" id="display_name" name="display_name" class="form-input"
+                       placeholder="e.g. Dr Sarah Jones" required>
+            </div>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" class="form-input"
+                       placeholder="e.g. sjones" required>
+            </div>
+            <div class="form-group">
+                <label for="role">Role</label>
+                <select id="role" name="role" class="toolbar-select form-input">
+                    <option value="gp">GP</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="password">Password <span style="color:var(--text-tertiary);font-weight:400;">(min 8 chars)</span></label>
+                <input type="password" id="password" name="password" class="form-input"
+                       autocomplete="new-password" required>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.75rem;">
+            <label style="display:flex; align-items:center; gap:0.375rem; font-size:0.875rem; cursor:pointer;">
+                <input type="checkbox" name="is_superuser"> Superuser (elevated admin)
+            </label>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Add User</button>
+        </div>
+    </form>
+</div>
+
+<!-- Existing Users Table -->
+<div class="settings-section">
+    <div class="settings-section-title">All Users</div>
+    {% if users %}
+    <table class="users-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr {% if u.id == current_user.id %}class="is-self"{% endif %}>
+                <td>
+                    <strong>{{ u.display_name }}</strong>
+                    {% if u.is_superuser %}<span class="superuser-badge">superuser</span>{% endif %}
+                    {% if u.id == current_user.id %}<span class="user-you-badge">(you)</span>{% endif %}
+                </td>
+                <td style="color:var(--text-secondary);">@{{ u.username }}</td>
+                <td><span class="nav-role-badge nav-role-{{ u.role }}">{{ u.role }}</span></td>
+                <td>
+                    <div style="display:flex; flex-direction:column; gap:0.375rem;">
+                        <!-- Reset password inline -->
+                        <div class="reset-pw-form">
+                            <input type="password" class="form-input reset-pw-input"
+                                   placeholder="New password" data-user-id="{{ u.id }}"
+                                   autocomplete="new-password">
+                            <button class="btn btn-secondary btn-sm-page"
+                                    onclick="resetPassword('{{ u.id }}', this)"
+                                    style="white-space:nowrap;">Reset password</button>
+                        </div>
+                        <!-- Delete -->
+                        {% if u.id != current_user.id %}
+                        <form method="POST" action="/admin/users/{{ u.id }}/delete"
+                              onsubmit="return confirm('Delete {{ u.display_name }}? This cannot be undone.')">
+                            <button type="submit" class="btn" style="font-size:0.75rem; color:var(--red); border-color:rgba(255,59,48,0.3);">
+                                Delete user
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-message">No users found.</p>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function resetPassword(userId, btn) {
+    const input = btn.parentElement.querySelector('.reset-pw-input');
+    const newPw = input.value.trim();
+    if (!newPw) { alert('Enter a new password first.'); return; }
+    if (newPw.length < 8) { alert('Password must be at least 8 characters.'); return; }
+    const resp = await fetch(`/admin/users/${userId}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_password: newPw }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+        input.value = '';
+        input.placeholder = 'Password updated ✓';
+        setTimeout(() => { input.placeholder = 'New password'; }, 3000);
+    } else {
+        alert('Error: ' + (data.error || 'Unknown'));
+    }
+}
+</script>
+{% endblock %}

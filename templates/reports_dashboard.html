@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Medical Reports — SAR Redact{% endblock %}
+
+{% block main_class %}container-wide{% endblock %}
+
+{% block content %}
+<div class="dash-hero">
+    <div class="dash-hero-text">
+        <h1>Medical Reports</h1>
+        <div class="heading-rule"></div>
+        <div class="dash-hero-stats">
+            <div class="hero-stat">
+                <span class="hero-stat-value">{{ reports | length }}</span>
+                <span class="hero-stat-label">Total</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value hero-stat-reviewing">{{ reports | selectattr('status', 'equalto', 'in_progress') | list | length }}</span>
+                <span class="hero-stat-label">In Progress</span>
+            </div>
+            <div class="hero-stat">
+                <span class="hero-stat-value hero-stat-complete">{{ reports | selectattr('status', 'equalto', 'complete') | list | length }}</span>
+                <span class="hero-stat-label">Complete</span>
+            </div>
+        </div>
+    </div>
+    <div class="dash-hero-right">
+        <a href="/reports/new" class="btn btn-primary">New Report</a>
+    </div>
+</div>
+
+<div class="dash-filters">
+    <input type="text" id="report-search" class="dash-search" placeholder="Search by patient name or template..." oninput="filterReports()">
+</div>
+
+{% if reports %}
+<table class="sar-table" id="reports-table">
+    <thead>
+        <tr>
+            <th>Patient</th>
+            <th>Report Type</th>
+            <th>Created</th>
+            <th>Status</th>
+            <th>Created By</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in reports %}
+        <tr class="report-row" data-name="{{ r.patient.full_name | lower }}" data-template="{{ r.template_name | lower }}">
+            <td>
+                <a href="/reports/{{ r.id }}" class="sar-subject-link">{{ r.patient.full_name or 'Unknown' }}</a>
+            </td>
+            <td>{{ r.template_name }}</td>
+            <td>{{ r.created_at | fdate }}</td>
+            <td>
+                <span class="workflow-badge workflow-{{ r.status }}">
+                    {% if r.status == 'draft' %}Draft
+                    {% elif r.status == 'in_progress' %}In Progress
+                    {% elif r.status == 'complete' %}Complete
+                    {% endif %}
+                </span>
+            </td>
+            <td>{{ r.created_by_name }}</td>
+            <td>
+                {% if r.status == 'complete' %}
+                <a href="/api/reports/{{ r.id }}/download/report_{{ r.id }}.pdf" class="btn-sm">Download</a>
+                {% endif %}
+                {% if current_user and current_user.role == 'admin' %}
+                <button class="btn-sm btn-danger" onclick="deleteReport('{{ r.id }}', '{{ r.patient.full_name }}')">Delete</button>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>No medical reports yet.</p>
+    <a href="/reports/new" class="btn btn-primary">Create your first report</a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function filterReports() {
+    const q = document.getElementById('report-search').value.toLowerCase();
+    document.querySelectorAll('.report-row').forEach(row => {
+        const name = row.dataset.name || '';
+        const tmpl = row.dataset.template || '';
+        row.style.display = (name.includes(q) || tmpl.includes(q)) ? '' : 'none';
+    });
+}
+
+function deleteReport(id, name) {
+    if (!confirm(`Delete report for "${name}"? This cannot be undone.`)) return;
+    fetch(`/api/reports/${id}/delete`, {method: 'POST'})
+        .then(r => r.json())
+        .then(d => { if (d.ok) location.reload(); else alert(d.error); });
+}
+</script>
+{% endblock %}

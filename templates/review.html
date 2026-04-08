@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+
+{% block title %}Review — SAR Redact{% endblock %}
+
+{% block main_class %}{% endblock %}
+
+{% block content %}
+<div class="review-toolbar">
+    <div class="toolbar-left">
+        <h2>Review</h2>
+        <span class="sar-ref">{{ sar.id }}</span>
+    </div>
+    <div class="toolbar-centre">
+        <select id="file-selector" class="toolbar-select" onchange="switchFile(this.value)">
+            {% for f in files_info %}
+            <option value="{{ f.name }}">{% if f.date %}{{ f.date | fdate }} — {% endif %}{{ f.name }} ({{ f.pages }}p)</option>
+            {% endfor %}
+        </select>
+        <span class="toolbar-divider"></span>
+        <button class="btn-sm" onclick="prevPage()" id="btn-prev" disabled>&lsaquo; Prev</button>
+        <span id="page-indicator">Page 1 / ?</span>
+        <button class="btn-sm" onclick="nextPage()" id="btn-next">Next &rsaquo;</button>
+        <button class="btn-sm" onclick="togglePageNavigator()" title="Show page overview (M)">Map</button>
+        <span class="toolbar-divider"></span>
+        <div class="order-toggle" title="Change document viewing order">
+            <button id="btn-order-date" class="btn-sm btn-order active" onclick="setViewOrder('date')">Date</button><button id="btn-order-file" class="btn-sm btn-order" onclick="setViewOrder('file')">File</button>
+        </div>
+        <button id="btn-pin-main" class="btn-sm btn-pin-main" onclick="pinCurrentFile()" title="Pin current file as main record (always shown first)">&#x1F4CC; Pin</button>
+    </div>
+    <div class="toolbar-right">
+        <select id="filter-select" class="toolbar-select" onchange="applyFilter(this.value)">
+            <option value="all">All</option>
+            <option value="flagged">Flagged</option>
+            <option value="auto_redact">Auto-Redact</option>
+            <option value="redacting">All Redacting</option>
+            <option value="excluded">Excluded</option>
+            <option value="risk_flagged">Risk Flagged</option>
+        </select>
+        <span class="toolbar-divider"></span>
+        <div class="zoom-controls">
+            <button onclick="zoomOut()" title="Zoom out">−</button>
+            <span id="zoom-level">Fit</span>
+            <button onclick="zoomIn()" title="Zoom in">+</button>
+            <button onclick="zoomFit()" title="Fit to panel">Fit</button>
+        </div>
+        <span class="toolbar-divider"></span>
+        <button id="btn-draw-mode" class="btn-draw-mode" onclick="toggleDrawMode()" title="Draw a manual redaction box">Draw</button>
+        <span class="toolbar-divider"></span>
+        <button class="btn-sm" onclick="toggleLegend()" title="Colour legend">Legend</button>
+        <span class="toolbar-divider"></span>
+        {% if current_user and current_user.role == 'admin' %}
+        <button class="btn-sm" onclick="showDetectionSettings()" title="Detection thresholds &amp; categories">Settings</button>
+        <span class="toolbar-divider"></span>
+        {% endif %}
+        {% if current_user and current_user.role == 'admin' %}
+        <button class="btn-sm btn-sm-delete" onclick="deleteCurrentPage()" title="Delete this page from the document">Delete Page</button>
+        <span class="toolbar-divider"></span>
+        {% endif %}
+        <button class="btn btn-secondary" onclick="showReviewExportModal()">Export</button>
+        <button class="btn btn-primary" onclick="showConfirmModal()">Finalise &amp; Download</button>
+    </div>
+</div>
+
+<div class="review-layout">
+    <div class="review-pdf-panel">
+        <div id="colour-legend" class="colour-legend hidden">
+            <div class="legend-title">Highlight Colours</div>
+            <div class="legend-grid">
+                <div class="legend-item"><span class="legend-swatch swatch-person_name"></span> Person Name</div>
+                <div class="legend-item"><span class="legend-swatch swatch-nhs_number"></span> NHS Number</div>
+                <div class="legend-item"><span class="legend-swatch swatch-address"></span> Address</div>
+                <div class="legend-item"><span class="legend-swatch swatch-phone_number"></span> Phone Number</div>
+                <div class="legend-item"><span class="legend-swatch swatch-postcode"></span> Postcode</div>
+                <div class="legend-item"><span class="legend-swatch swatch-email"></span> Email</div>
+                <div class="legend-item"><span class="legend-swatch swatch-safeguarding"></span> Safeguarding</div>
+                <div class="legend-item"><span class="legend-swatch swatch-sexual_health"></span> Sexual Health</div>
+                <div class="legend-item"><span class="legend-swatch swatch-custom_word"></span> Custom Word</div>
+                <div class="legend-item"><span class="legend-swatch swatch-manual"></span> Manual</div>
+            </div>
+            <div class="legend-border-key">
+                <div class="legend-title" style="margin-top:8px">Border Styles</div>
+                <div class="legend-item"><span class="legend-line legend-solid-red"></span> Redact</div>
+                <div class="legend-item"><span class="legend-line legend-solid-orange"></span> Flagged</div>
+                <div class="legend-item"><span class="legend-line legend-dashed"></span> Rejected</div>
+                <div class="legend-item"><span class="legend-line legend-dotted"></span> Excluded</div>
+            </div>
+        </div>
+        <div id="page-navigator" class="page-navigator hidden">
+            <div class="page-nav-grid" id="page-nav-grid"></div>
+        </div>
+        <div id="page-container" class="page-container">
+            <img id="page-image" alt="PDF page">
+        </div>
+    </div>
+
+    <div class="review-sidebar">
+        <div class="review-progress" id="review-progress">
+            <div class="progress-text">
+                <span id="progress-label">0 of 0 reviewed</span>
+                <span id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+            </div>
+        </div>
+        <div class="sidebar-header">
+            <div class="sidebar-stats" id="sidebar-stats"></div>
+            <div class="sidebar-actions">
+                <button id="btn-view-mode" class="btn-sm btn-sm-view" onclick="toggleViewMode()" title="Toggle per-page / grouped view (G)">Grouped</button>
+                <button class="btn-sm btn-sm-approve" onclick="batchAction('approve_all', 'flagged')">Approve All Flagged</button>
+                <button class="btn-sm btn-sm-reject" onclick="batchAction('reject_all', 'flagged')">Reject All Flagged</button>
+                <button class="btn-sm btn-sm-page" onclick="approveAllOnPage()" title="Approve all flagged on the current page only">Approve Page</button>
+            </div>
+        </div>
+        <div class="search-panel">
+            <input type="text" id="search-input" class="search-input"
+                   placeholder="Search across all pages... (/)" />
+            <div id="search-results" class="search-results hidden"></div>
+        </div>
+        <div class="add-word-panel">
+            <div class="add-word-row">
+                <input type="text" id="add-word-input" class="add-word-input" placeholder="Add word or phrase to redact list…" />
+                <button class="btn-sm btn-sm-approve" onclick="addWordToList()">Add</button>
+            </div>
+        </div>
+        <div id="candidate-list" class="candidate-list"></div>
+        <div class="notes-panel">
+            <div class="notes-panel-label">Notes</div>
+            <textarea id="notes-textarea" class="notes-textarea" placeholder="Add case notes…"></textarea>
+            <div class="notes-saved" id="notes-saved">Saved</div>
+        </div>
+    </div>
+</div>
+
+<div id="export-overlay" class="overlay hidden">
+    <div class="overlay-content confirm-modal">
+        <h2>Export SAR for Handover</h2>
+        <p style="margin-bottom:1rem;">This downloads a <strong>.sarpack</strong> file containing all documents and the current review progress. Send it to a colleague who can import it into their copy of SAR Redact and continue from here.</p>
+        <div class="info-box" style="background:var(--gold-dim,#fdf6e3);border:1px solid var(--gold);border-radius:6px;padding:1rem;margin-bottom:1.25rem;font-size:0.875rem;">
+            <strong>&#9993; Send via NHSmail only</strong><br>
+            This file contains patient data. You <strong>must</strong> send it from your <strong>@nhs.net</strong> address to another <strong>@nhs.net</strong> address. Do not use personal or non-NHS email.
+        </div>
+        <div id="export-progress-wrap" class="overlay-progress" style="margin-bottom:1rem;display:none;">
+            <div class="overlay-progress-bar overlay-progress-indeterminate"></div>
+        </div>
+        <div class="confirm-actions">
+            <button class="btn btn-secondary" onclick="hideReviewExportModal()">Cancel</button>
+            <a id="review-export-link" class="btn btn-primary" onclick="startExportDownload(event)">Download .sarpack</a>
+        </div>
+    </div>
+</div>
+
+<div id="finalise-overlay" class="overlay hidden">
+    <div class="overlay-content">
+        <h2>Applying Redactions…</h2>
+        <p>Generating redacted PDFs and log file.</p>
+        <div class="overlay-progress" style="margin-top:1.25rem;">
+            <div class="overlay-progress-bar overlay-progress-indeterminate"></div>
+        </div>
+    </div>
+</div>
+
+<div id="confirm-overlay" class="overlay hidden">
+    <div class="overlay-content confirm-modal">
+        <h2>Confirm Finalisation</h2>
+        <div class="confirm-summary" id="confirm-summary"></div>
+        <div id="confirm-warning"></div>
+        <div class="confirm-actions">
+            <button class="btn btn-secondary" onclick="hideConfirmModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="proceedFinalise()">Finalise &amp; Download</button>
+        </div>
+    </div>
+</div>
+
+<div id="shortcuts-overlay" class="overlay hidden">
+    <div class="overlay-content shortcuts-modal">
+        <h2>Keyboard Shortcuts</h2>
+        <div class="shortcuts-grid">
+            <div class="shortcut-group">
+                <h3>Navigation</h3>
+                <div class="shortcut-row"><kbd>j</kbd> / <kbd>&darr;</kbd> <span>Next candidate</span></div>
+                <div class="shortcut-row"><kbd>k</kbd> / <kbd>&uarr;</kbd> <span>Previous candidate</span></div>
+                <div class="shortcut-row"><kbd>&rarr;</kbd> <span>Next page</span></div>
+                <div class="shortcut-row"><kbd>&larr;</kbd> <span>Previous page</span></div>
+                <div class="shortcut-row"><kbd>/</kbd> <span>Focus search</span></div>
+            </div>
+            <div class="shortcut-group">
+                <h3>Actions</h3>
+                <div class="shortcut-row"><kbd>a</kbd> <span>Redact / undo redact</span></div>
+                <div class="shortcut-row"><kbd>x</kbd> <span>Keep / undo keep</span></div>
+                <div class="shortcut-row"><kbd>1</kbd>-<kbd>9</kbd> <span>Set exemption code</span></div>
+                <div class="shortcut-row"><kbd>0</kbd> <span>Clear exemption</span></div>
+            </div>
+            <div class="shortcut-group">
+                <h3>Tools</h3>
+                <div class="shortcut-row"><kbd>d</kbd> <span>Toggle draw mode</span></div>
+                <div class="shortcut-row"><kbd>f</kbd> <span>Cycle filter</span></div>
+                <div class="shortcut-row"><kbd>g</kbd> <span>Toggle grouped view</span></div>
+                <div class="shortcut-row"><kbd>l</kbd> <span>Toggle colour legend</span></div>
+                <div class="shortcut-row"><kbd>m</kbd> <span>Toggle page map</span></div>
+                <div class="shortcut-row"><kbd>n</kbd> <span>Focus notes</span></div>
+                <div class="shortcut-row"><kbd>?</kbd> <span>Show / hide shortcuts</span></div>
+                <div class="shortcut-row"><kbd>Esc</kbd> <span>Close / blur / exit</span></div>
+            </div>
+        </div>
+        <button class="btn btn-secondary" onclick="toggleShortcutsOverlay()">Close</button>
+    </div>
+</div>
+
+<div id="settings-overlay" class="overlay hidden">
+    <div class="overlay-content settings-modal">
+        <h2>Detection Settings</h2>
+        <div class="settings-section">
+            <label class="settings-label">Auto-redact threshold
+                <span class="settings-val" id="auto-thresh-val">0.80</span>
+            </label>
+            <input type="range" id="auto-thresh-slider" class="settings-slider"
+                   min="0.50" max="1.00" step="0.05" value="0.80"
+                   oninput="document.getElementById('auto-thresh-val').textContent=parseFloat(this.value).toFixed(2)">
+            <div class="settings-hint">Items above this confidence are auto-redacted</div>
+        </div>
+        <div class="settings-section">
+            <label class="settings-label">Flag threshold
+                <span class="settings-val" id="flag-thresh-val">0.50</span>
+            </label>
+            <input type="range" id="flag-thresh-slider" class="settings-slider"
+                   min="0.10" max="0.90" step="0.05" value="0.50"
+                   oninput="document.getElementById('flag-thresh-val').textContent=parseFloat(this.value).toFixed(2)">
+            <div class="settings-hint">Items above this but below auto-redact are flagged for review</div>
+        </div>
+        <div class="settings-section">
+            <label class="settings-label">Enabled categories</label>
+            <div class="settings-categories" id="settings-categories">
+                <label class="settings-cat"><input type="checkbox" value="person_name" checked> Person Name</label>
+                <label class="settings-cat"><input type="checkbox" value="nhs_number" checked> NHS Number</label>
+                <label class="settings-cat"><input type="checkbox" value="address" checked> Address</label>
+                <label class="settings-cat"><input type="checkbox" value="phone_number" checked> Phone Number</label>
+                <label class="settings-cat"><input type="checkbox" value="postcode" checked> Postcode</label>
+                <label class="settings-cat"><input type="checkbox" value="email" checked> Email</label>
+                <label class="settings-cat"><input type="checkbox" value="safeguarding" checked> Safeguarding</label>
+                <label class="settings-cat"><input type="checkbox" value="sexual_health" checked> Sexual Health</label>
+                <label class="settings-cat"><input type="checkbox" value="custom_word" checked> Custom Word</label>
+                <label class="settings-cat"><input type="checkbox" value="manual" checked> Manual</label>
+            </div>
+        </div>
+        <div class="settings-actions">
+            <button class="btn btn-secondary" onclick="hideDetectionSettings()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveDetectionSettings()">Save &amp; Re-scan</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const SAR_ID = "{{ sar.id }}";
+    const FILES_INFO = {{ files_info | tojson }};
+    const FILES_INFO_DATE = {{ files_info_date | tojson }};
+    const FILES_INFO_FILE = {{ files_info_file | tojson }};
+    const MAIN_RECORD_FILE = {{ main_record_file | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/review.js') }}"></script>
+<script>
+function showReviewExportModal() {
+    document.getElementById('review-export-link').href = `/api/sar/${SAR_ID}/export`;
+    document.getElementById('export-progress-wrap').style.display = 'none';
+    document.getElementById('export-overlay').classList.remove('hidden');
+}
+function hideReviewExportModal() {
+    document.getElementById('export-overlay').classList.add('hidden');
+}
+function startExportDownload(e) {
+    // Show indeterminate bar while browser fetches the file
+    const wrap = document.getElementById('export-progress-wrap');
+    wrap.style.display = '';
+    // Auto-hide overlay after download starts (browser handles the actual download)
+    setTimeout(() => hideReviewExportModal(), 2500);
+}
+document.getElementById('export-overlay').addEventListener('click', function(e) {
+    if (e.target === this) hideReviewExportModal();
+});
+document.getElementById('shortcuts-overlay').addEventListener('click', function(e) {
+    if (e.target === this) toggleShortcutsOverlay();
+});
+document.getElementById('settings-overlay').addEventListener('click', function(e) {
+    if (e.target === this) hideDetectionSettings();
+});
+
+async function deleteCurrentPage() {
+    const filename = document.getElementById('file-selector').value;
+    const pageIndicator = document.getElementById('page-indicator').textContent;
+    const match = pageIndicator.match(/Page (\d+) \/ (\d+)/);
+    if (!match) return;
+    const pageNum = parseInt(match[1]) - 1;  // convert to 0-indexed
+    const totalPages = parseInt(match[2]);
+
+    if (!confirm(`Delete page ${pageNum + 1} of "${filename}"?\n\nThis permanently removes the page and all its detections. This cannot be undone.`)) return;
+
+    const resp = await fetch(`/api/sar/${SAR_ID}/delete-page`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, page_num: pageNum }),
+    });
+
+    if (!resp.ok) {
+        const e = await resp.json().catch(() => ({}));
+        alert('Error: ' + (e.error || 'Unknown error'));
+        return;
+    }
+
+    const data = await resp.json();
+    if (data.new_page_count === 0) {
+        // File is now empty — reload to dashboard
+        alert('All pages deleted. Returning to dashboard.');
+        window.location.href = '/';
+        return;
+    }
+
+    // Stay on same page number, or last page if we deleted the last one
+    const newPage = Math.min(pageNum + 1, data.new_page_count);
+    window.location.reload();
+}
+
+async function addWordToList() {
+    const input = document.getElementById('add-word-input');
+    const phrase = input.value.trim();
+    if (!phrase) return;
+
+    const addResp = await fetch('/api/custom-words', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase, case_sensitive: false }),
+    });
+    if (!addResp.ok) {
+        alert('Failed to add word.');
+        return;
+    }
+    input.value = '';
+
+    if (!confirm(`"${phrase}" added to the redaction list.\n\nRe-scan documents now to find new matches?`)) return;
+
+    const reparseResp = await fetch(`/api/sar/${SAR_ID}/reparse`, { method: 'POST' });
+    if (!reparseResp.ok) {
+        alert('Re-scan failed.');
+        return;
+    }
+    const data = await reparseResp.json();
+    const msg = data.new_found > 0
+        ? `Re-scan complete. Found ${data.new_found} new match${data.new_found === 1 ? '' : 'es'}.`
+        : 'Re-scan complete. No new matches found.';
+    alert(msg);
+    window.location.reload();
+}
+
+document.getElementById('add-word-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') addWordToList();
+});
+
+async function submitSignOff() {
+    if (!confirm('Mark this SAR as ready for admin sign-off?\n\nYou will be redirected to the dashboard.')) return;
+    const resp = await fetch(`/api/sar/${SAR_ID}/workflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ready_for_signoff' }),
+    });
+    if (resp.ok) {
+        window.location.href = '/';
+    } else {
+        const e = await resp.json().catch(() => ({}));
+        alert('Error: ' + (e.error || 'Unknown error'));
+    }
+}
+</script>
+{% endblock %}

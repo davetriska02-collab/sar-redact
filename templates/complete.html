@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Complete — SAR Redact{% endblock %}
+
+{% block content %}
+<div class="complete-hero">
+    <div class="complete-art">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;margin:0 auto;">
+          <!-- Circle background -->
+          <rect x="10" y="0"  width="60" height="5" fill="#d4edda"/>
+          <rect x="5"  y="5"  width="70" height="5" fill="#d4edda"/>
+          <rect x="0"  y="10" width="80" height="60" fill="#d4edda"/>
+          <rect x="5"  y="70" width="70" height="5" fill="#d4edda"/>
+          <rect x="10" y="75" width="60" height="5" fill="#d4edda"/>
+          <!-- Checkmark -->
+          <rect x="15" y="40" width="5" height="5" fill="#248a3d"/>
+          <rect x="20" y="45" width="5" height="5" fill="#248a3d"/>
+          <rect x="25" y="50" width="5" height="5" fill="#248a3d"/>
+          <rect x="30" y="55" width="5" height="5" fill="#248a3d"/>
+          <rect x="35" y="50" width="5" height="5" fill="#248a3d"/>
+          <rect x="40" y="45" width="5" height="5" fill="#248a3d"/>
+          <rect x="45" y="40" width="5" height="5" fill="#248a3d"/>
+          <rect x="50" y="35" width="5" height="5" fill="#248a3d"/>
+          <rect x="55" y="30" width="5" height="5" fill="#248a3d"/>
+          <rect x="60" y="25" width="5" height="5" fill="#248a3d"/>
+        </svg>
+    </div>
+    <h1>Redaction Complete</h1>
+    <div class="complete-subject">{{ sar.subject.full_name or (sar.subject.first_name + ' ' + sar.subject.last_name) }}</div>
+    <p class="complete-meta">SAR Reference: {{ sar.id }}</p>
+    <p class="complete-meta">Completed: {{ sar.created_at | fdate }}</p>
+    <div class="complete-stats">
+        <div class="complete-stat-item">
+            <span class="complete-stat-num stat-redact">{{ redacted_count }}</span>
+            <span class="complete-stat-lbl">Redacted</span>
+        </div>
+        <div class="complete-stat-item">
+            <span class="complete-stat-num stat-kept">{{ kept_count }}</span>
+            <span class="complete-stat-lbl">Kept</span>
+        </div>
+        <div class="complete-stat-item">
+            <span class="complete-stat-num stat-excl">{{ excluded_count }}</span>
+            <span class="complete-stat-lbl">Excluded</span>
+        </div>
+    </div>
+</div>
+
+<div class="download-grid-header">
+    <h3 style="margin:0;font-size:1rem;">Redacted Files</h3>
+    <a id="btn-download-all" class="btn btn-primary btn-download-all hidden" href="/api/sar/{{ sar.id }}/download-all" download>Download All (ZIP)</a>
+</div>
+
+<div class="download-grid" id="download-links">
+    <div style="text-align: center; padding: 2rem;">
+        <div class="spinner" style="margin: 0 auto 0.75rem;"></div>
+        <p style="color: var(--text-secondary);">Preparing files…</p>
+    </div>
+</div>
+
+<div class="form-actions" style="justify-content: center; margin-top: 2rem;">
+    <a href="/" class="btn btn-secondary">Back to Dashboard</a>
+    <button class="btn btn-secondary" onclick="showCompleteExportModal()">Export .sarpack</button>
+    <a href="/new" class="btn btn-primary">New SAR Request</a>
+</div>
+
+<div id="export-overlay" class="overlay hidden">
+    <div class="overlay-content confirm-modal">
+        <h2>Export SAR for Handover</h2>
+        <p style="margin-bottom:1rem;">This downloads a <strong>.sarpack</strong> file containing all documents and the completed review. The recipient can import it into their copy of SAR Redact.</p>
+        <div class="info-box" style="background:var(--gold-dim,#fdf6e3);border:1px solid var(--gold);border-radius:6px;padding:1rem;margin-bottom:1.25rem;font-size:0.875rem;">
+            <strong>&#9993; Send via NHSmail only</strong><br>
+            This file contains patient data. You <strong>must</strong> send it from your <strong>@nhs.net</strong> address to another <strong>@nhs.net</strong> address. Do not use personal or non-NHS email.
+        </div>
+        <div class="confirm-actions">
+            <button class="btn btn-secondary" onclick="hideCompleteExportModal()">Cancel</button>
+            <a id="complete-export-link" class="btn btn-primary" onclick="hideCompleteExportModal()">Download .sarpack</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const SAR_ID = "{{ sar.id }}";
+
+function showCompleteExportModal() {
+    document.getElementById('complete-export-link').href = `/api/sar/${SAR_ID}/export`;
+    document.getElementById('export-overlay').classList.remove('hidden');
+}
+function hideCompleteExportModal() {
+    document.getElementById('export-overlay').classList.add('hidden');
+}
+document.getElementById('export-overlay').addEventListener('click', function(e) {
+    if (e.target === this) hideCompleteExportModal();
+});
+
+document.addEventListener('DOMContentLoaded', loadDownloads);
+
+async function loadDownloads() {
+    const container = document.getElementById('download-links');
+    try {
+        const resp = await fetch(`/api/sar/${SAR_ID}/outputs`);
+        if (!resp.ok) {
+            container.innerHTML = '<p style="text-align:center;color:var(--text-secondary)">Files are being generated. Refresh in a moment.</p>';
+            return;
+        }
+        const data = await resp.json();
+        let html = '';
+
+        if (data.redacted_files && data.redacted_files.length > 0) {
+            // Show "Download All" button when there are files
+            const dlAll = document.getElementById('btn-download-all');
+            if (dlAll) dlAll.classList.remove('hidden');
+
+            data.redacted_files.forEach(f => {
+                html += `
+                    <div class="download-card">
+                        <div class="download-icon">PDF</div>
+                        <div class="download-info">
+                            <h3>${escapeHtml(f)}</h3>
+                            <p>Redacted document</p>
+                        </div>
+                        <a href="/api/sar/${SAR_ID}/download/${encodeURIComponent(f)}" class="btn btn-primary">Download</a>
+                    </div>
+                `;
+            });
+        }
+
+        if (data.log_file) {
+            html += `
+                <div class="download-card">
+                    <div class="download-icon download-icon-log">LOG</div>
+                    <div class="download-info">
+                        <h3>${escapeHtml(data.log_file)}</h3>
+                        <p>Redaction audit log</p>
+                    </div>
+                    <a href="/api/sar/${SAR_ID}/download/${encodeURIComponent(data.log_file)}" class="btn btn-secondary">Download</a>
+                </div>
+            `;
+        }
+
+        container.innerHTML = html || '<p style="text-align:center;color:var(--text-secondary)">No files found.</p>';
+    } catch (err) {
+        container.innerHTML = `<p class="error" style="text-align:center">Error loading files: ${err.message}</p>`;
+    }
+}
+
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+}
+</script>
+{% endblock %}

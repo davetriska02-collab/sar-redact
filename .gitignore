@@ -1,0 +1,11 @@
+uploads/
+output/
+data/
+.claude/
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+cookies.txt
+*.sarpack

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}My Account — SAR Redact{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>My Account</h1>
+    <div class="heading-rule"></div>
+</div>
+
+<div class="account-section">
+    <div class="form-card">
+        <div class="form-card-title">Change Password</div>
+
+        {% if error %}
+        <div class="auth-error">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="auth-success">{{ success }}</div>
+        {% endif %}
+
+        <form method="POST" action="/account/change-password">
+            <div class="form-group">
+                <label for="current_password">Current password</label>
+                <input type="password" id="current_password" name="current_password"
+                       class="form-input" autocomplete="current-password" required>
+            </div>
+            <div class="form-group">
+                <label for="new_password">New password <span style="color:var(--text-tertiary);font-weight:400;">(min 8 characters)</span></label>
+                <input type="password" id="new_password" name="new_password"
+                       class="form-input" autocomplete="new-password" required>
+            </div>
+            <div class="form-group">
+                <label for="confirm_password">Confirm new password</label>
+                <input type="password" id="confirm_password" name="confirm_password"
+                       class="form-input" autocomplete="new-password" required>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Update password</button>
+                <a href="/" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div style="padding: 0.5rem; font-size: 0.875rem; color: var(--text-secondary);">
+        <strong>{{ current_user.display_name }}</strong>
+        &nbsp;·&nbsp;
+        <span class="nav-role-badge nav-role-{{ current_user.role }}">{{ current_user.role }}</span>
+        &nbsp;·&nbsp;
+        @{{ current_user.username }}
+    </div>
+</div>
+{% endblock %}

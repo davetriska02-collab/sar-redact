@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — SAR Redact{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Settings</h1>
+    <div class="heading-rule"></div>
+    <p style="margin-top: 0.6rem;">Manage staff exclusions and custom redaction rules.</p>
+</div>
+
+<div class="settings-section">
+    <div class="settings-section-header">
+        <h2>Staff List</h2>
+        <p>Names on this list are <strong>excluded</strong> from redaction. Add all practice staff here.</p>
+    </div>
+    <div class="settings-add-form">
+        <input type="text" id="staff-name" placeholder="Full name (e.g. Dr Jane Smith)">
+        <input type="text" id="staff-role" placeholder="Role (optional)" style="max-width: 200px;">
+        <button type="button" class="btn-sm btn-sm-primary" onclick="submitAddStaff()">Add</button>
+    </div>
+    <ul class="settings-list" id="staff-list">
+        <li class="settings-empty" id="staff-empty">No staff members added yet.</li>
+    </ul>
+</div>
+
+<div class="settings-section">
+    <div class="settings-section-header">
+        <h2>Custom Redaction Words</h2>
+        <p>Words or phrases listed here are <strong>always auto-redacted</strong> in every document.</p>
+    </div>
+    <div class="settings-add-form">
+        <input type="text" id="word-phrase" placeholder="Word or phrase to always redact" style="flex: 2;">
+        <label class="inline-checkbox">
+            <input type="checkbox" id="word-case-sensitive"> Case sensitive
+        </label>
+        <button type="button" class="btn-sm btn-sm-primary" onclick="submitAddWord()">Add</button>
+    </div>
+    <ul class="settings-list" id="words-list">
+        <li class="settings-empty" id="words-empty">No custom redaction words added yet.</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadStaff();
+    loadCustomWords();
+});
+
+// ── Staff ──────────────────────────────────────────────────────────────────
+
+async function loadStaff() {
+    const resp = await fetch('/api/staff');
+    const staff = await resp.json();
+    const list = document.getElementById('staff-list');
+    const empty = document.getElementById('staff-empty');
+    list.innerHTML = '';
+
+    if (staff.length === 0) {
+        list.appendChild(empty);
+        return;
+    }
+
+    staff.forEach(s => {
+        const li = document.createElement('li');
+        li.className = 'settings-list-item';
+        li.innerHTML = `
+            <span class="settings-item-name">${escapeHtml(s.name)}</span>
+            ${s.role ? `<span class="settings-item-sub">${escapeHtml(s.role)}</span>` : ''}
+            <button class="btn-sm" style="margin-left: auto;" onclick="removeStaff('${escapeHtml(s.name)}')">Remove</button>
+        `;
+        list.appendChild(li);
+    });
+}
+
+async function submitAddStaff() {
+    const name = document.getElementById('staff-name').value.trim();
+    const role = document.getElementById('staff-role').value.trim();
+    if (!name) return;
+
+    await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, role }),
+    });
+
+    document.getElementById('staff-name').value = '';
+    document.getElementById('staff-role').value = '';
+    loadStaff();
+}
+
+document.getElementById('staff-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitAddStaff();
+});
+
+async function removeStaff(name) {
+    if (!confirm(`Remove ${name} from the staff list?`)) return;
+    await fetch(`/api/staff/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    loadStaff();
+}
+
+// ── Custom Words ───────────────────────────────────────────────────────────
+
+async function loadCustomWords() {
+    const resp = await fetch('/api/custom-words');
+    const words = await resp.json();
+    const list = document.getElementById('words-list');
+    const empty = document.getElementById('words-empty');
+    list.innerHTML = '';
+
+    if (words.length === 0) {
+        list.appendChild(empty);
+        return;
+    }
+
+    words.forEach(w => {
+        const li = document.createElement('li');
+        li.className = 'settings-list-item';
+        li.innerHTML = `
+            <span class="settings-item-name">${escapeHtml(w.phrase)}</span>
+            <span class="settings-item-sub">${w.case_sensitive ? 'case-sensitive' : 'any case'}</span>
+            <button class="btn-sm" style="margin-left: auto;" onclick="removeCustomWord('${escapeHtml(w.phrase)}')">Remove</button>
+        `;
+        list.appendChild(li);
+    });
+}
+
+async function submitAddWord() {
+    const phrase = document.getElementById('word-phrase').value.trim();
+    const caseSensitive = document.getElementById('word-case-sensitive').checked;
+    if (!phrase) return;
+
+    await fetch('/api/custom-words', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase, case_sensitive: caseSensitive }),
+    });
+
+    document.getElementById('word-phrase').value = '';
+    document.getElementById('word-case-sensitive').checked = false;
+    loadCustomWords();
+}
+
+document.getElementById('word-phrase').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitAddWord();
+});
+
+async function removeCustomWord(phrase) {
+    if (!confirm(`Remove "${phrase}" from custom redaction words?`)) return;
+    await fetch(`/api/custom-words/${encodeURIComponent(phrase)}`, { method: 'DELETE' });
+    loadCustomWords();
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────
+
+function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+}
+</script>
+{% endblock %}

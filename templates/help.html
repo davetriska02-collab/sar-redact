@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+{% block title %}Help - SAR Redact{% endblock %}
+
+{% block content %}
+<div class="help-layout">
+    <nav class="help-nav">
+        <div class="help-nav-title">Contents</div>
+        <a href="#quick-start">Quick Start</a>
+        <a href="#creating-sar">Creating a SAR</a>
+        <a href="#dashboard">The Dashboard</a>
+        <a href="#reviewing">Reviewing Documents</a>
+        <a href="#bulk-actions">Bulk Actions</a>
+        <a href="#visual-tools">Visual Tools</a>
+        <a href="#search">Search &amp; Custom Words</a>
+        <a href="#shortcuts">Keyboard Shortcuts</a>
+        <a href="#detection-settings">Detection Settings</a>
+        <a href="#stop-clock">Stop-the-Clock</a>
+        <a href="#finalising">Finalising &amp; Download</a>
+        <a href="#export-import">Export &amp; Import</a>
+        <a href="#user-management">User Management</a>
+        <a href="#settings-page">Settings Page</a>
+        <a href="#workflow">Workflow Statuses</a>
+    </nav>
+
+    <div class="help-container">
+        <h1>User Guide</h1>
+        <p class="help-intro">SAR Redact helps NHS practices process Subject Access Requests by automatically detecting and redacting third-party personal information from medical records.</p>
+
+        <!-- ─── Quick Start ─────────────────────────────────────────── -->
+        <section id="quick-start" class="help-section">
+            <details class="help-topic" open>
+                <summary>Quick Start</summary>
+                <div class="help-body">
+                    <div class="help-steps">
+                        <div class="help-step">
+                            <span class="help-step-num">1</span>
+                            <div>
+                                <strong>Sign in</strong> with your username and password. If this is a fresh install, the first user to visit the app will be prompted to create an admin account.
+                            </div>
+                        </div>
+                        <div class="help-step">
+                            <span class="help-step-num">2</span>
+                            <div>
+                                <strong>Create a SAR</strong> by clicking <strong>New SAR</strong> in the top menu. Enter the data subject's details and upload the PDF or TIF files to process.
+                            </div>
+                        </div>
+                        <div class="help-step">
+                            <span class="help-step-num">3</span>
+                            <div>
+                                <strong>Review detections</strong> on the review page. The system highlights third-party names, NHS numbers, addresses, and other sensitive items. Approve or reject each one.
+                            </div>
+                        </div>
+                        <div class="help-step">
+                            <span class="help-step-num">4</span>
+                            <div>
+                                <strong>Finalise</strong> to apply all approved redactions. The system generates blacked-out PDFs and an audit log.
+                            </div>
+                        </div>
+                        <div class="help-step">
+                            <span class="help-step-num">5</span>
+                            <div>
+                                <strong>Download</strong> the redacted documents and the redaction log from the completion page.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Creating a SAR ──────────────────────────────────────── -->
+        <section id="creating-sar" class="help-section">
+            <details class="help-topic">
+                <summary>Creating a SAR Request</summary>
+                <div class="help-body">
+                    <p>Click <strong>New SAR</strong> in the navigation bar to open the request form.</p>
+
+                    <h3>Subject Details</h3>
+                    <p>Enter the data subject's personal information. This data is used to <em>exclude</em> their own details from redaction &mdash; the system will not redact the subject's own name, address, or NHS number.</p>
+                    <ul>
+                        <li><strong>First Name</strong> and <strong>Last Name</strong> are required.</li>
+                        <li><strong>NHS Number</strong> &mdash; enter in the format 000 000 0000.</li>
+                        <li><strong>Date of Birth</strong> &mdash; enter as DD/MM/YYYY.</li>
+                        <li><strong>Address</strong>, <strong>Phone</strong>, and <strong>Email</strong> are optional but improve exclusion accuracy.</li>
+                    </ul>
+                    <p>If the subject is known by other names (maiden name, preferred name), add them under <strong>Alternative Names / Aliases</strong> using the + button.</p>
+
+                    <h3>Uploading Documents</h3>
+                    <p>Upload one or more <strong>PDF</strong> or <strong>TIF/TIFF</strong> files. You can drag and drop files onto the upload area or click to browse. TIF files are automatically converted to PDF during processing.</p>
+                    <p>Click <strong>Process SAR</strong> to start. The system will extract text from every page and run PII detection. This may take a moment for large files.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Dashboard ───────────────────────────────────────────── -->
+        <section id="dashboard" class="help-section">
+            <details class="help-topic">
+                <summary>The Dashboard</summary>
+                <div class="help-body">
+                    <p>The dashboard shows all SAR requests with their current status, deadline, and workflow state.</p>
+
+                    <h3>Status Cards</h3>
+                    <p>Summary cards at the top show the total number of requests, how many are in review, how many are complete, and how many are overdue.</p>
+
+                    <h3>Search &amp; Filter</h3>
+                    <p>Use the search bar to find requests by subject name or reference ID. The status dropdown filters by workflow state (New, In Review, Ready for Sign-off, Complete).</p>
+
+                    <h3>Deadline Indicator</h3>
+                    <p>Each SAR shows days remaining until the 30-day statutory deadline. The indicator turns amber below 10 days and red below 5. Completed SARs show a dash.</p>
+
+                    <h3>Allocation <span class="help-role-badge help-role-admin">Admin</span></h3>
+                    <p>Admins can allocate a SAR to a GP reviewer using the dropdown in the <strong>Allocated To</strong> column. GPs will only see SARs allocated to them.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Reviewing Documents ─────────────────────────────────── -->
+        <section id="reviewing" class="help-section">
+            <details class="help-topic">
+                <summary>Reviewing Documents</summary>
+                <div class="help-body">
+                    <p>The review page shows the document on the left with coloured highlight overlays, and a candidate list on the right.</p>
+
+                    <h3>Candidate Cards</h3>
+                    <p>Each detected item is shown as a card in the sidebar. Cards display the detected text, its category (e.g. Person Name, NHS Number), the confidence score, and the current status.</p>
+
+                    <h3>Approving and Rejecting</h3>
+                    <p>For each candidate:</p>
+                    <ul>
+                        <li><strong>Redact</strong> (or press <kbd>a</kbd>) &mdash; approve for redaction. The text will be blacked out in the final document.</li>
+                        <li><strong>Keep</strong> (or press <kbd>x</kbd>) &mdash; reject the detection. The text will remain visible.</li>
+                    </ul>
+                    <p>Press the same key again to undo and return to the previous status.</p>
+
+                    <h3>Exemption Codes</h3>
+                    <p>When redacting, you can assign a legal exemption code to justify the redaction. Press <kbd>1</kbd> through <kbd>9</kbd> to apply a code, or <kbd>0</kbd> to clear it. Available exemptions include third-party data (s.16(4)), serious harm (Sch 3, Para 2), crime prevention, legal privilege, and others under the UK GDPR / DPA 2018.</p>
+
+                    <h3>Risk Flags</h3>
+                    <p>Candidates containing safeguarding or sexual health terms are automatically flagged with a risk indicator. These items require extra care during review.</p>
+
+                    <h3>Reason Notes</h3>
+                    <p>Each candidate has a reason field where you can record why a decision was made. This is saved automatically and appears in the audit log.</p>
+
+                    <h3>Case Notes</h3>
+                    <p>The <strong>Notes</strong> panel at the bottom of the sidebar lets you add free-text notes about the entire SAR case. Notes are saved automatically as you type.</p>
+
+                    <h3>Statuses Explained</h3>
+                    <ul>
+                        <li><strong>Auto-redact</strong> &mdash; High confidence detection, automatically marked for redaction.</li>
+                        <li><strong>Flagged</strong> &mdash; Medium confidence, needs manual review.</li>
+                        <li><strong>Approved</strong> &mdash; Reviewer confirmed for redaction.</li>
+                        <li><strong>Rejected</strong> &mdash; Reviewer decided to keep the text visible.</li>
+                        <li><strong>Excluded (Subject)</strong> &mdash; Matches the data subject's own details, automatically excluded.</li>
+                        <li><strong>Excluded (Staff)</strong> &mdash; Matches a name on the staff list, automatically excluded.</li>
+                    </ul>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Bulk Actions ────────────────────────────────────────── -->
+        <section id="bulk-actions" class="help-section">
+            <details class="help-topic">
+                <summary>Bulk Actions</summary>
+                <div class="help-body">
+                    <h3>Sidebar Batch Buttons</h3>
+                    <ul>
+                        <li><strong>Approve All Flagged</strong> &mdash; marks every flagged candidate across the entire document for redaction.</li>
+                        <li><strong>Reject All Flagged</strong> &mdash; marks every flagged candidate as kept.</li>
+                        <li><strong>Approve Page</strong> &mdash; approves only the flagged candidates on the current page.</li>
+                    </ul>
+
+                    <h3>Grouped View</h3>
+                    <p>Press <kbd>g</kbd> or click <strong>Grouped</strong> in the sidebar to switch from per-page view to grouped view. This groups all candidates with the same text and category together.</p>
+                    <p>Each group card shows:</p>
+                    <ul>
+                        <li>The detected text and its category</li>
+                        <li>How many instances were found and across which pages</li>
+                        <li>A summary of current statuses</li>
+                        <li><strong>Redact All</strong> and <strong>Keep All</strong> buttons to batch-update every instance at once</li>
+                    </ul>
+                    <p>Click any instance within a group to jump to that page. Press <kbd>g</kbd> again to return to per-page view.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Visual Tools ────────────────────────────────────────── -->
+        <section id="visual-tools" class="help-section">
+            <details class="help-topic">
+                <summary>Visual Tools</summary>
+                <div class="help-body">
+                    <h3>Category Colour Legend</h3>
+                    <p>Each PII category is shown in a distinct colour on the PDF. Press <kbd>l</kbd> or click <strong>Legend</strong> to see the colour key. The highlight fill indicates the category (e.g. purple for names, blue for NHS numbers) while the border style indicates the status (solid for redact, dashed for rejected, dotted for excluded).</p>
+
+                    <h3>Page Navigator</h3>
+                    <p>Press <kbd>m</kbd> or click <strong>Map</strong> to open the page navigator. This shows a compact grid of page badges:</p>
+                    <ul>
+                        <li><strong>Green</strong> &mdash; all candidates reviewed</li>
+                        <li><strong>Amber</strong> &mdash; has flagged items still needing review</li>
+                        <li><strong>Grey</strong> &mdash; no candidates on this page</li>
+                        <li><strong>Blue outline</strong> &mdash; current page</li>
+                    </ul>
+                    <p>Click any badge to jump directly to that page.</p>
+
+                    <h3>Zoom Controls</h3>
+                    <p>Use the <strong>+</strong> and <strong>&minus;</strong> buttons in the toolbar to zoom in and out. Click <strong>Fit</strong> to fit the page to the panel width.</p>
+
+                    <h3>Draw Mode (Manual Redaction)</h3>
+                    <p>Press <kbd>d</kbd> or click <strong>Draw</strong> to enter draw mode. Click and drag on the PDF to draw a redaction box over any area. This creates a "manual" category candidate that can be approved or rejected like any other detection. Press <kbd>d</kbd> again or <kbd>Esc</kbd> to exit draw mode.</p>
+
+                    <h3>Filter Dropdown</h3>
+                    <p>Use the filter dropdown in the toolbar (or press <kbd>f</kbd> to cycle) to show only specific candidate types: All, Flagged, Auto-Redact, All Redacting, Excluded, or Risk Flagged.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Search & Custom Words ───────────────────────────────── -->
+        <section id="search" class="help-section">
+            <details class="help-topic">
+                <summary>Search &amp; Custom Words</summary>
+                <div class="help-body">
+                    <h3>Cross-Page Search</h3>
+                    <p>Press <kbd>/</kbd> or click the search box to search for text across all pages. Results show every matching candidate with its page number and context. Click a result to jump to that page and highlight the match. You can also bulk-redact all matches directly from the search results.</p>
+
+                    <h3>Adding Custom Redaction Words</h3>
+                    <p>In the sidebar, use the <strong>Add word or phrase</strong> field to add a term that should always be redacted. Type the word or phrase and press Enter or click <strong>Add</strong>.</p>
+                    <p>The word is added to the site-wide custom redaction list and the document is immediately re-scanned. Any new matches are added as candidates (existing review decisions are preserved). Multi-word phrases are supported.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Keyboard Shortcuts ──────────────────────────────────── -->
+        <section id="shortcuts" class="help-section">
+            <details class="help-topic">
+                <summary>Keyboard Shortcuts</summary>
+                <div class="help-body">
+                    <p>Press <kbd>?</kbd> on the review page to show the shortcuts overlay at any time.</p>
+                    <table class="shortcut-table">
+                        <thead>
+                            <tr><th>Key</th><th>Action</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><kbd>j</kbd> / <kbd>&darr;</kbd></td><td>Next candidate</td></tr>
+                            <tr><td><kbd>k</kbd> / <kbd>&uarr;</kbd></td><td>Previous candidate</td></tr>
+                            <tr><td><kbd>&rarr;</kbd></td><td>Next page</td></tr>
+                            <tr><td><kbd>&larr;</kbd></td><td>Previous page</td></tr>
+                            <tr><td><kbd>/</kbd></td><td>Focus search</td></tr>
+                            <tr><td><kbd>a</kbd></td><td>Redact / undo redact</td></tr>
+                            <tr><td><kbd>x</kbd></td><td>Keep / undo keep</td></tr>
+                            <tr><td><kbd>1</kbd>&ndash;<kbd>9</kbd></td><td>Set exemption code</td></tr>
+                            <tr><td><kbd>0</kbd></td><td>Clear exemption code</td></tr>
+                            <tr><td><kbd>d</kbd></td><td>Toggle draw mode</td></tr>
+                            <tr><td><kbd>f</kbd></td><td>Cycle filter</td></tr>
+                            <tr><td><kbd>g</kbd></td><td>Toggle grouped view</td></tr>
+                            <tr><td><kbd>l</kbd></td><td>Toggle colour legend</td></tr>
+                            <tr><td><kbd>m</kbd></td><td>Toggle page map</td></tr>
+                            <tr><td><kbd>n</kbd></td><td>Focus notes</td></tr>
+                            <tr><td><kbd>?</kbd></td><td>Show / hide shortcuts</td></tr>
+                            <tr><td><kbd>Esc</kbd></td><td>Close overlay / blur / exit draw mode</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Detection Settings ──────────────────────────────────── -->
+        <section id="detection-settings" class="help-section">
+            <details class="help-topic">
+                <summary>Detection Settings <span class="help-role-badge help-role-admin">Admin</span></summary>
+                <div class="help-body">
+                    <p>Click <strong>Settings</strong> in the review toolbar to open the detection settings overlay.</p>
+
+                    <h3>Confidence Thresholds</h3>
+                    <p>Two sliders control how the system categorises detections:</p>
+                    <ul>
+                        <li><strong>Auto-redact threshold</strong> (default 0.80) &mdash; items with confidence above this value are automatically marked for redaction.</li>
+                        <li><strong>Flag threshold</strong> (default 0.50) &mdash; items between this value and the auto-redact threshold are flagged for manual review. Items below this threshold are not shown.</li>
+                    </ul>
+                    <p>The flag threshold must be lower than the auto-redact threshold.</p>
+
+                    <h3>Category Toggles</h3>
+                    <p>Use the checkboxes to enable or disable individual PII categories. Disabled categories will not be detected during scanning. Available categories: Person Name, NHS Number, Address, Phone Number, Postcode, Email, Safeguarding, Sexual Health, Custom Word, and Manual.</p>
+
+                    <h3>Save &amp; Re-scan</h3>
+                    <p>Click <strong>Save &amp; Re-scan</strong> to apply your changes. The system will re-run detection on all documents with the new settings. Existing review decisions are preserved &mdash; only new matches are added.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Stop-the-Clock ──────────────────────────────────────── -->
+        <section id="stop-clock" class="help-section">
+            <details class="help-topic">
+                <summary>Stop-the-Clock <span class="help-role-badge help-role-admin">Admin</span></summary>
+                <div class="help-body">
+                    <p>Under ICO guidance, the 30-day statutory clock for responding to a SAR can be paused in certain circumstances (e.g. awaiting identity verification, requesting clarification, or awaiting a fee).</p>
+
+                    <h3>Pausing the Clock</h3>
+                    <p>On the dashboard, click the <strong>Pause</strong> button next to the SAR. You will be prompted to enter a reason (e.g. "Awaiting ID verification"). The deadline indicator changes to <strong>PAUSED</strong> and the countdown stops.</p>
+
+                    <h3>Resuming the Clock</h3>
+                    <p>Click <strong>Resume</strong> to restart the countdown. The number of paused days is added to the effective deadline, giving you extra time.</p>
+
+                    <p>Paused days are shown on the dashboard as "+Xd paused" next to the deadline. A full log of pause/resume events with reasons and timestamps is maintained for audit purposes.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Finalising & Download ───────────────────────────────── -->
+        <section id="finalising" class="help-section">
+            <details class="help-topic">
+                <summary>Finalising &amp; Download</summary>
+                <div class="help-body">
+                    <p>When you are satisfied that all candidates have been reviewed, click <strong>Finalise &amp; Download</strong> in the toolbar.</p>
+
+                    <h3>What Happens</h3>
+                    <p>The system applies black redaction boxes over every approved item in the original PDFs. It also generates a redaction audit log listing every redaction with its page number, category, exemption code, reason, and confidence score. A diagonal "REDACTED" watermark is added to each page.</p>
+
+                    <h3>Completion Page</h3>
+                    <p>After finalisation, the completion page shows summary statistics (redacted, kept, excluded counts) and download buttons for each redacted PDF and the audit log.</p>
+
+                    <p>Finalisation is an admin-only action. GP reviewers submit their work using the <strong>Sign Off</strong> button, which moves the SAR to "Ready for Sign-off" status for admin review.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Export & Import ──────────────────────────────────────── -->
+        <section id="export-import" class="help-section">
+            <details class="help-topic">
+                <summary>Export &amp; Import (.sarpack)</summary>
+                <div class="help-body">
+                    <h3>Exporting</h3>
+                    <p>Click <strong>Export</strong> on the review page or dashboard to download a <strong>.sarpack</strong> file. This is a portable archive containing all uploaded documents, review progress, candidate decisions, and settings. Use it to hand work over to a colleague or transfer between systems.</p>
+
+                    <h3>Importing <span class="help-role-badge help-role-admin">Admin</span></h3>
+                    <p>On the dashboard, click <strong>Import SAR</strong> and select a .sarpack file. If a SAR with the same ID already exists, the system will warn you and show the modification timestamps for both versions. You can choose to overwrite or cancel.</p>
+
+                    <h3>Security</h3>
+                    <p>.sarpack files contain patient data. Always transfer them via <strong>NHSmail</strong> (@nhs.net addresses only). Do not send via personal email, USB drives, or other unsecured channels.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── User Management ─────────────────────────────────────── -->
+        <section id="user-management" class="help-section">
+            <details class="help-topic">
+                <summary>User Management <span class="help-role-badge help-role-admin">Admin</span></summary>
+                <div class="help-body">
+                    <p>Navigate to <strong>Users</strong> in the top menu to manage accounts.</p>
+
+                    <h3>Roles</h3>
+                    <ul>
+                        <li><strong>Admin</strong> &mdash; full access. Can create SARs, review, finalise, manage users, import/export, adjust settings, and pause the clock.</li>
+                        <li><strong>GP</strong> &mdash; review access. Can review allocated SARs, approve/reject candidates, add custom words, draw manual redactions, and sign off completed reviews. Cannot finalise, delete, or manage users.</li>
+                    </ul>
+
+                    <h3>Adding a User</h3>
+                    <p>Fill in the name, username, role, and password (minimum 8 characters). Optionally tick <strong>Superuser</strong> for elevated admin privileges.</p>
+
+                    <h3>Resetting Passwords</h3>
+                    <p>Enter a new password in the reset field next to any user and click <strong>Reset password</strong>.</p>
+
+                    <h3>Deleting Users</h3>
+                    <p>Click the delete button next to any user (you cannot delete your own account). A confirmation prompt will appear before deletion.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Settings Page ───────────────────────────────────────── -->
+        <section id="settings-page" class="help-section">
+            <details class="help-topic">
+                <summary>Settings Page</summary>
+                <div class="help-body">
+                    <h3>Staff List</h3>
+                    <p>Navigate to <strong>Settings</strong> in the top menu. The staff list contains names of all practice staff. These names are automatically <strong>excluded</strong> from redaction &mdash; since they are your own staff, they do not need to be redacted from patient records.</p>
+                    <p>Add staff members by entering their full name and optionally their role (e.g. "Practice Manager"). Click the remove button to delete a staff member from the list.</p>
+
+                    <h3>Custom Redaction Words</h3>
+                    <p>Words or phrases added here are always auto-redacted in every document processed by the system. This is useful for organisation-specific terms that should never appear in disclosed records.</p>
+                    <p>Each word can be marked as <strong>case-sensitive</strong> or <strong>any case</strong> (default). Click remove to delete a word from the list.</p>
+                </div>
+            </details>
+        </section>
+
+        <!-- ─── Workflow Statuses ───────────────────────────────────── -->
+        <section id="workflow" class="help-section">
+            <details class="help-topic">
+                <summary>Workflow Statuses</summary>
+                <div class="help-body">
+                    <p>Each SAR progresses through four workflow stages:</p>
+
+                    <div class="help-workflow">
+                        <div class="help-workflow-step">
+                            <span class="workflow-pill workflow-new">New</span>
+                            <p>SAR has been created and documents processed. Detection is complete. Awaiting a reviewer to begin work.</p>
+                        </div>
+                        <div class="help-workflow-arrow">&rarr;</div>
+                        <div class="help-workflow-step">
+                            <span class="workflow-pill workflow-in_review">In Review</span>
+                            <p>A reviewer is actively working through candidates. The SAR has been allocated to a GP or is being reviewed by an admin.</p>
+                        </div>
+                        <div class="help-workflow-arrow">&rarr;</div>
+                        <div class="help-workflow-step">
+                            <span class="workflow-pill workflow-ready_for_signoff">Ready for Sign-off</span>
+                            <p>The GP reviewer has completed their review and clicked <strong>Sign Off</strong>. An admin now needs to verify the work and finalise.</p>
+                        </div>
+                        <div class="help-workflow-arrow">&rarr;</div>
+                        <div class="help-workflow-step">
+                            <span class="workflow-pill workflow-complete">Complete</span>
+                            <p>Redactions have been applied. Redacted PDFs and the audit log are available for download and disclosure to the data subject.</p>
+                        </div>
+                    </div>
+                </div>
+            </details>
+        </section>
+
+    </div>
+</div>
+{% endblock %}

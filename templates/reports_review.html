@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Report Review — SAR Redact{% endblock %}
+
+{% block main_class %}{% endblock %}
+
+{% block content %}
+<div class="review-toolbar">
+    <div class="toolbar-left">
+        <a href="/reports" class="page-header-back" style="margin-right:0.75rem">&larr;</a>
+        <h2>Report</h2>
+        <span class="sar-ref">{{ report.patient.full_name }}</span>
+        <span class="workflow-badge workflow-{{ report.status }}" style="margin-left:0.5rem">
+            {% if report.status == 'in_progress' %}In Progress{% elif report.status == 'complete' %}Complete{% else %}{{ report.status }}{% endif %}
+        </span>
+    </div>
+    <div class="toolbar-centre">
+        <select id="file-selector" class="toolbar-select" onchange="switchFile(this.value)">
+            {% for f in files_info %}
+            <option value="{{ f.name }}">{% if f.date %}{{ f.date | fdate }} — {% endif %}{{ f.name }} ({{ f.pages }}p)</option>
+            {% endfor %}
+        </select>
+        <span class="toolbar-divider"></span>
+        <button class="btn-sm" onclick="prevPage()" id="btn-prev" disabled>&lsaquo; Prev</button>
+        <span id="page-indicator">Page 1 / ?</span>
+        <button class="btn-sm" onclick="nextPage()" id="btn-next">Next &rsaquo;</button>
+    </div>
+    <div class="toolbar-right">
+        <button class="btn btn-primary" id="btn-generate" onclick="generateReport()">Generate PDF</button>
+    </div>
+</div>
+
+<div class="review-layout">
+    <!-- Left panel: PDF viewer -->
+    <div class="review-viewer" id="review-viewer">
+        <img id="page-image" src="" alt="Document page" class="review-page-image">
+    </div>
+
+    <!-- Right panel: Questions -->
+    <div class="review-sidebar" id="review-sidebar">
+        <div class="sidebar-header">
+            <h3>{{ report.template_name }}</h3>
+            <div class="report-progress" id="report-progress"></div>
+        </div>
+
+        <!-- Keyword Flags Panel -->
+        <div id="kf-panel" class="kf-panel{% if not report.keyword_flags %} hidden{% endif %}">
+            <div class="kf-header" onclick="toggleKFPanel()">
+                <span class="kf-icon">&#9888;</span>
+                <span class="kf-title">Keyword flags</span>
+                <span class="kf-summary" id="kf-summary"></span>
+                <span class="kf-chevron" id="kf-chevron">&#9660;</span>
+            </div>
+            <div id="kf-body" class="kf-body">
+                <div id="kf-groups"></div>
+            </div>
+        </div>
+
+        <div id="questions-list">
+            {% for a in report.answers %}
+            <div class="question-card" id="q-{{ a.question_id }}" data-qid="{{ a.question_id }}">
+                <div class="question-header" onclick="toggleQuestion('{{ a.question_id }}')">
+                    <span class="question-num">Q{{ loop.index }}</span>
+                    <span class="question-text-preview">{{ a.question_text[:80] }}{% if a.question_text|length > 80 %}...{% endif %}</span>
+                    <span class="question-status {% if a.reviewed %}status-done{% elif a.answer %}status-partial{% endif %}" id="qstatus-{{ a.question_id }}">
+                        {% if a.reviewed %}Done{% elif a.answer %}Draft{% endif %}
+                    </span>
+                </div>
+                <div class="question-body" id="qbody-{{ a.question_id }}" style="display:none">
+                    <p class="question-full-text">{{ a.question_text }}</p>
+
+                    <!-- Evidence snippets -->
+                    <div class="evidence-section">
+                        <div class="evidence-header" onclick="toggleEvidence('{{ a.question_id }}')">
+                            <strong>Evidence from records</strong>
+                            <span class="evidence-count">({{ a.evidence | length }})</span>
+                        </div>
+                        <div class="evidence-list" id="evidence-{{ a.question_id }}" style="display:none">
+                            {% if a.evidence %}
+                            {% for e in a.evidence %}
+                            <div class="evidence-snippet" onclick="navigateToEvidence('{{ e.source_file }}', {{ e.page_num }})">
+                                <div class="evidence-source">{{ e.source_file }} &middot; Page {{ e.page_num + 1 }}</div>
+                                <div class="evidence-text">{{ e.text[:300] }}{% if e.text|length > 300 %}...{% endif %}</div>
+                            </div>
+                            {% endfor %}
+                            {% else %}
+                            <div class="evidence-empty">No matching evidence found in records.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Answer input -->
+                    <div class="answer-section">
+                        {% if a.question_type == 'yes_no' %}
+                        <div class="answer-yesno">
+                            <label><input type="radio" name="ans-{{ a.question_id }}" value="Yes" {% if a.answer == 'Yes' %}checked{% endif %} onchange="saveAnswer('{{ a.question_id }}', 'Yes')"> Yes</label>
+                            <label><input type="radio" name="ans-{{ a.question_id }}" value="No" {% if a.answer == 'No' %}checked{% endif %} onchange="saveAnswer('{{ a.question_id }}', 'No')"> No</label>
+                            <label><input type="radio" name="ans-{{ a.question_id }}" value="Not known" {% if a.answer == 'Not known' %}checked{% endif %} onchange="saveAnswer('{{ a.question_id }}', 'Not known')"> Not known</label>
+                        </div>
+                        <textarea class="answer-detail" placeholder="Additional details (optional)..." rows="2"
+                                  id="detail-{{ a.question_id }}" oninput="debounceSaveDetail('{{ a.question_id }}')">{% if a.answer and a.answer not in ['Yes','No','Not known'] %}{{ a.answer }}{% endif %}</textarea>
+                        {% elif a.question_type == 'multiple_choice' %}
+                        <select class="answer-select" onchange="saveAnswer('{{ a.question_id }}', this.value)">
+                            <option value="">— Select —</option>
+                            {% for opt in a.options %}
+                            <option value="{{ opt }}" {% if a.answer == opt %}selected{% endif %}>{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                        {% elif a.question_type == 'date' %}
+                        <input type="text" class="answer-date" placeholder="DD/MM/YYYY"
+                               value="{{ a.answer }}" oninput="debounceSave('{{ a.question_id }}', this.value)">
+                        {% else %}
+                        <textarea class="answer-textarea" placeholder="Enter your answer..." rows="3"
+                                  id="ans-{{ a.question_id }}" oninput="debounceSave('{{ a.question_id }}', this.value)">{{ a.answer }}</textarea>
+                        {% endif %}
+
+                        <div class="answer-actions">
+                            <label class="reviewed-check">
+                                <input type="checkbox" {% if a.reviewed %}checked{% endif %}
+                                       onchange="markReviewed('{{ a.question_id }}', this.checked)">
+                                Mark as reviewed
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const REPORT_ID = '{{ report.id }}';
+const FILES_INFO = {{ files_info | tojson }};
+const KEYWORD_FLAGS = {{ report.keyword_flags | default([]) | tojson }};
+
+let currentFile = FILES_INFO.length ? FILES_INFO[0].name : '';
+let currentPage = 0;
+let pageCount = FILES_INFO.length ? FILES_INFO[0].pages : 0;
+let saveTimers = {};
+
+function loadPageImage() {
+    const img = document.getElementById('page-image');
+    img.src = `/api/reports/${REPORT_ID}/page-image/${encodeURIComponent(currentFile)}/${currentPage}`;
+    document.getElementById('page-indicator').textContent = `Page ${currentPage + 1} / ${pageCount}`;
+    document.getElementById('btn-prev').disabled = currentPage === 0;
+    document.getElementById('btn-next').disabled = currentPage >= pageCount - 1;
+}
+
+function switchFile(filename) {
+    currentFile = filename;
+    currentPage = 0;
+    const info = FILES_INFO.find(f => f.name === filename);
+    pageCount = info ? info.pages : 0;
+    loadPageImage();
+}
+
+function nextPage() {
+    if (currentPage < pageCount - 1) { currentPage++; loadPageImage(); }
+}
+
+function prevPage() {
+    if (currentPage > 0) { currentPage--; loadPageImage(); }
+}
+
+function navigateToEvidence(sourceFile, pageNum) {
+    // Switch to the right file and page
+    const sel = document.getElementById('file-selector');
+    for (let i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === sourceFile) {
+            sel.selectedIndex = i;
+            switchFile(sourceFile);
+            break;
+        }
+    }
+    currentPage = pageNum;
+    loadPageImage();
+}
+
+function toggleQuestion(qid) {
+    const body = document.getElementById('qbody-' + qid);
+    const wasHidden = body.style.display === 'none';
+    // Collapse all
+    document.querySelectorAll('.question-body').forEach(b => b.style.display = 'none');
+    if (wasHidden) body.style.display = 'block';
+}
+
+function toggleEvidence(qid) {
+    const el = document.getElementById('evidence-' + qid);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveAnswer(qid, value) {
+    fetch(`/api/reports/${REPORT_ID}/answer`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question_id: qid, answer: value}),
+    });
+    updateStatus(qid, value, false);
+}
+
+function debounceSave(qid, value) {
+    clearTimeout(saveTimers[qid]);
+    saveTimers[qid] = setTimeout(() => saveAnswer(qid, value), 600);
+}
+
+function debounceSaveDetail(qid) {
+    // For yes/no questions with an additional detail textarea
+    const radios = document.querySelectorAll(`input[name="ans-${qid}"]`);
+    let base = '';
+    radios.forEach(r => { if (r.checked) base = r.value; });
+    const detail = document.getElementById('detail-' + qid).value.trim();
+    const full = detail ? `${base} — ${detail}` : base;
+    debounceSave(qid, full);
+}
+
+function markReviewed(qid, checked) {
+    const ansEl = document.getElementById('ans-' + qid);
+    const answer = ansEl ? ansEl.value : '';
+    fetch(`/api/reports/${REPORT_ID}/answer`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question_id: qid, answer: answer, reviewed: checked}),
+    });
+    updateStatus(qid, answer, checked);
+}
+
+function updateStatus(qid, answer, reviewed) {
+    const el = document.getElementById('qstatus-' + qid);
+    if (reviewed) {
+        el.textContent = 'Done';
+        el.className = 'question-status status-done';
+    } else if (answer) {
+        el.textContent = 'Draft';
+        el.className = 'question-status status-partial';
+    } else {
+        el.textContent = '';
+        el.className = 'question-status';
+    }
+    updateProgress();
+}
+
+function updateProgress() {
+    const cards = document.querySelectorAll('.question-card');
+    let done = 0;
+    cards.forEach(c => {
+        const st = c.querySelector('.question-status');
+        if (st && st.classList.contains('status-done')) done++;
+    });
+    document.getElementById('report-progress').textContent = `${done} / ${cards.length} reviewed`;
+}
+
+function generateReport() {
+    if (!confirm('Generate the final PDF report? You can still edit answers afterwards.')) return;
+    document.getElementById('btn-generate').disabled = true;
+    document.getElementById('btn-generate').textContent = 'Generating...';
+    fetch(`/api/reports/${REPORT_ID}/generate`, {method: 'POST'})
+        .then(r => r.json())
+        .then(d => {
+            if (d.ok) {
+                window.location.href = `/api/reports/${REPORT_ID}/download/${d.filename}`;
+                setTimeout(() => {
+                    document.getElementById('btn-generate').disabled = false;
+                    document.getElementById('btn-generate').textContent = 'Generate PDF';
+                }, 2000);
+            } else {
+                alert(d.error || 'Generation failed');
+                document.getElementById('btn-generate').disabled = false;
+                document.getElementById('btn-generate').textContent = 'Generate PDF';
+            }
+        });
+}
+
+// ── Keyword Flags ────────────────────────────────────────────────────────────
+function _esc(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function renderKeywordFlags() {
+    if (!KEYWORD_FLAGS.length) return;
+
+    const panel = document.getElementById('kf-panel');
+    panel.classList.remove('hidden');
+
+    const totalMatches = KEYWORD_FLAGS.reduce((s, f) => s + f.match_count, 0);
+    const nCats = KEYWORD_FLAGS.length;
+    document.getElementById('kf-summary').textContent =
+        `${nCats} categor${nCats !== 1 ? 'ies' : 'y'}, ${totalMatches} match${totalMatches !== 1 ? 'es' : ''}`;
+
+    const container = document.getElementById('kf-groups');
+    KEYWORD_FLAGS.forEach((flag, idx) => {
+        const preview = flag.question_text.length > 72
+            ? flag.question_text.slice(0, 72) + '\u2026'
+            : flag.question_text;
+
+        const kwPills = flag.matched_keywords
+            .map(kw => `<span class="kf-kw-pill">${_esc(kw)}</span>`)
+            .join('');
+
+        const matchRows = flag.matches.map(m => `
+            <div class="kf-match" onclick="navigateToEvidence('${_esc(m.source_file)}', ${m.page_num})">
+                <span class="kf-match-kw">${_esc(m.keyword)}</span>
+                <span class="kf-match-loc">${_esc(m.source_file)} &middot; p${m.page_num + 1}</span>
+                <div class="kf-context">${_esc(m.context)}</div>
+            </div>`).join('');
+
+        const group = document.createElement('div');
+        group.className = 'kf-group';
+        group.innerHTML = `
+            <div class="kf-group-header" onclick="toggleKFGroup(${idx})">
+                <span class="kf-q-preview">${_esc(preview)}</span>
+                <span class="kf-match-count">${flag.match_count} match${flag.match_count !== 1 ? 'es' : ''}</span>
+            </div>
+            <div class="kf-keywords">${kwPills}</div>
+            <div class="kf-matches" id="kfmatches-${idx}" style="display:none">${matchRows}</div>`;
+        container.appendChild(group);
+    });
+}
+
+function toggleKFPanel() {
+    const body = document.getElementById('kf-body');
+    const chevron = document.getElementById('kf-chevron');
+    const visible = body.style.display !== 'none';
+    body.style.display = visible ? 'none' : 'block';
+    chevron.textContent = visible ? '\u25B6' : '\u25BC';
+}
+
+function toggleKFGroup(idx) {
+    const el = document.getElementById('kfmatches-' + idx);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    if (FILES_INFO.length) loadPageImage();
+    updateProgress();
+    renderKeywordFlags();
+    // Open first question
+    const first = document.querySelector('.question-card');
+    if (first) toggleQuestion(first.dataset.qid);
+});
+</script>
+{% endblock %}
