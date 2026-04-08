@@ -6,9 +6,9 @@ A desktop tool for NHS GP practices to process Subject Access Requests (SARs). D
 
 ## ⬇️ Download
 
-**[Click here to download the latest version](https://github.com/davetriska02-collab/sar-redact/releases/latest/download/SAR.Redact.zip)**
+**[⬇️ Click here to download SAR Redact v1.0](https://github.com/davetriska02-collab/sar-redact/releases/latest/download/SAR.Redact.zip)**
 
-Or go to the [Releases page](https://github.com/davetriska02-collab/sar-redact/releases) and download `SAR.Redact.zip` from the latest release.
+Or visit the [Releases page](https://github.com/davetriska02-collab/sar-redact/releases) and download `SAR.Redact.zip`.
 
 ---
 
