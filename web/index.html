@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAR Redact</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ─── Navbar ──────────────────────────────────────────────────────────── -->
+<nav class="navbar">
+    <div class="nav-brand"><a href="#" onclick="navigate('dashboard');return false;">SAR Redact</a></div>
+    <div class="nav-links">
+        <a href="#" onclick="navigate('dashboard');return false;" id="nav-dashboard" class="active">Dashboard</a>
+        <a href="#" onclick="navigate('new');return false;" id="nav-new">New SAR</a>
+        <a href="#" onclick="navigate('staff');return false;" id="nav-staff">Settings</a>
+    </div>
+    <div class="nav-user">
+        <span class="nav-role-badge nav-role-admin" style="font-size:0.7rem;">Browser</span>
+    </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE: Dashboard                                                        -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<main id="page-dashboard" class="container-wide">
+    <div class="dash-hero">
+        <div class="dash-hero-text">
+            <h1>Subject Access Requests</h1>
+            <div class="heading-rule"></div>
+            <div class="dash-hero-stats">
+                <div class="hero-stat"><span class="hero-stat-value" id="stat-total">0</span><span class="hero-stat-label">Total</span></div>
+                <div class="hero-stat"><span class="hero-stat-value hero-stat-reviewing" id="stat-reviewing">0</span><span class="hero-stat-label">Reviewing</span></div>
+                <div class="hero-stat"><span class="hero-stat-value hero-stat-complete" id="stat-complete">0</span><span class="hero-stat-label">Complete</span></div>
+            </div>
+        </div>
+        <div class="dash-hero-right">
+            <div class="dash-hero-art">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 102" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;">
+                  <rect x="15" y="99" width="65" height="3" fill="rgba(80,60,40,0.10)"/>
+                  <rect x="13" y="10" width="75" height="5" fill="#9a8b7a"/><rect x="13" y="95" width="75" height="5" fill="#9a8b7a"/>
+                  <rect x="13" y="15" width="5" height="80" fill="#9a8b7a"/><rect x="83" y="15" width="5" height="80" fill="#9a8b7a"/>
+                  <rect x="18" y="15" width="65" height="80" fill="#f5f0e8"/>
+                  <rect x="23" y="20" width="45" height="5" fill="#ddd4c7"/><rect x="23" y="40" width="30" height="5" fill="#ddd4c7"/>
+                  <rect x="23" y="60" width="15" height="5" fill="#ddd4c7"/><rect x="23" y="80" width="40" height="5" fill="#ddd4c7"/>
+                  <rect x="23" y="30" width="50" height="5" fill="#cca870"/><rect x="23" y="50" width="25" height="5" fill="#cca870"/><rect x="23" y="70" width="45" height="5" fill="#cca870"/>
+                  <rect x="3" y="88" width="65" height="3" fill="rgba(80,60,40,0.18)"/>
+                  <rect x="0" y="0" width="75" height="5" fill="#6b5d50"/><rect x="0" y="85" width="75" height="5" fill="#6b5d50"/>
+                  <rect x="0" y="5" width="5" height="80" fill="#6b5d50"/><rect x="70" y="5" width="5" height="80" fill="#6b5d50"/>
+                  <rect x="5" y="5" width="65" height="80" fill="#f2ede6"/>
+                  <rect x="10" y="10" width="45" height="5" fill="#c8bdb2"/><rect x="10" y="30" width="30" height="5" fill="#c8bdb2"/>
+                  <rect x="10" y="50" width="15" height="5" fill="#c8bdb2"/><rect x="10" y="70" width="40" height="5" fill="#c8bdb2"/>
+                  <rect x="10" y="20" width="50" height="5" fill="#b8965f"/><rect x="10" y="40" width="25" height="5" fill="#b8965f"/><rect x="10" y="60" width="45" height="5" fill="#b8965f"/>
+                </svg>
+            </div>
+            <a href="#" class="btn btn-primary" onclick="navigate('new');return false;">+ New SAR</a>
+        </div>
+    </div>
+
+    <div class="dash-filter-bar" id="dash-filter-bar" style="display:none;">
+        <input type="text" id="dash-search" class="dash-search-input" placeholder="Search by subject name or reference..." oninput="filterDashboard()">
+        <select id="dash-status-filter" class="toolbar-select" onchange="filterDashboard()">
+            <option value="all">All</option><option value="new">New</option>
+            <option value="in_review">In Review</option><option value="complete">Complete</option>
+        </select>
+    </div>
+
+    <div class="sar-table-card">
+        <div id="dash-empty" class="dash-empty">
+            <div class="dash-empty-art">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 90 116" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;margin:0 auto;">
+                  <rect x="6" y="108" width="78" height="6" fill="rgba(80,60,40,0.09)"/>
+                  <rect x="0" y="0" width="90" height="6" fill="#b8a895"/><rect x="0" y="102" width="90" height="6" fill="#b8a895"/>
+                  <rect x="0" y="6" width="6" height="96" fill="#b8a895"/><rect x="84" y="6" width="6" height="96" fill="#b8a895"/>
+                  <rect x="6" y="6" width="78" height="96" fill="#f7f3ee"/>
+                  <rect x="12" y="14" width="54" height="6" fill="#e0d8d0"/><rect x="12" y="38" width="36" height="6" fill="#e0d8d0"/>
+                  <rect x="12" y="62" width="18" height="6" fill="#e0d8d0"/><rect x="12" y="86" width="42" height="6" fill="#e0d8d0"/>
+                  <rect x="12" y="26" width="66" height="6" fill="#e2c98a"/><rect x="12" y="50" width="42" height="6" fill="#e2c98a"/><rect x="12" y="74" width="54" height="6" fill="#e2c98a"/>
+                </svg>
+            </div>
+            <h3>No requests yet</h3>
+            <p>Create your first Subject Access Request to get started.</p>
+            <p style="margin-top:0.5rem;color:var(--text-tertiary);font-size:0.85rem;">All data stays in your browser. Nothing is sent anywhere.</p>
+            <a href="#" class="btn btn-primary" onclick="navigate('new');return false;">New SAR Request</a>
+        </div>
+        <table class="sar-table" id="sar-table" style="display:none;">
+            <thead><tr><th>Subject</th><th>Summary</th><th>Deadline</th><th>Status</th><th></th></tr></thead>
+            <tbody id="sar-table-body"></tbody>
+        </table>
+        <p class="dash-no-results hidden" id="dash-no-results" style="text-align:center;padding:2rem;color:var(--text-tertiary);">No matching requests.</p>
+    </div>
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE: New SAR                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<main id="page-new" class="container" style="display:none">
+    <div class="page-header">
+        <a href="#" class="page-header-back" onclick="navigate('dashboard');return false;">&larr; Dashboard</a>
+        <h1>New Subject Access Request</h1>
+        <div class="heading-rule"></div>
+        <p style="margin-top:0.6rem;">Enter the data subject's details and upload the PDF documents to be redacted.</p>
+    </div>
+    <form id="sar-form" onsubmit="processNewSAR(event);return false;">
+        <div class="form-card">
+            <div class="form-card-title">Data Subject Details</div>
+            <div class="form-card-hint">Information matching these details will be <strong>excluded</strong> from redaction.</div>
+            <div class="form-grid">
+                <div class="form-group"><label for="first_name">First Name <span class="required">*</span></label><input type="text" id="first_name" required></div>
+                <div class="form-group"><label for="last_name">Last Name <span class="required">*</span></label><input type="text" id="last_name" required></div>
+                <div class="form-group"><label for="nhs_number">NHS Number</label><input type="text" id="nhs_number" placeholder="000 000 0000"></div>
+                <div class="form-group"><label for="date_of_birth">Date of Birth</label><input type="text" id="date_of_birth" placeholder="DD/MM/YYYY"></div>
+                <div class="form-group form-group-wide"><label for="address">Address</label><input type="text" id="address" placeholder="Full address"></div>
+                <div class="form-group"><label for="phone">Phone Number</label><input type="text" id="phone"></div>
+                <div class="form-group"><label for="email">Email</label><input type="email" id="email"></div>
+            </div>
+            <div class="form-group" style="margin-top:1.25rem;">
+                <label>Alternative Names / Aliases</label>
+                <div id="aliases-container">
+                    <div class="alias-row">
+                        <input type="text" class="alias-input" placeholder="e.g. maiden name, preferred name">
+                        <button type="button" class="btn-add-alias" onclick="addAliasRow()">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-card">
+            <div class="form-card-title">Documents</div>
+            <div class="form-card-hint">Upload PDF files to process. Multiple files allowed.</div>
+            <div class="file-drop-zone" id="file-drop-zone">
+                <input type="file" id="pdf_files" accept=".pdf" multiple required>
+                <div class="file-drop-label"><strong>Choose files</strong> or drag and drop</div>
+                <div class="file-drop-sub">PDF files only &middot; Multiple files allowed</div>
+            </div>
+            <div id="file-list" class="file-list"></div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="submit-btn">Process SAR</button>
+            <a href="#" class="btn btn-secondary" onclick="navigate('dashboard');return false;">Cancel</a>
+        </div>
+    </form>
+    <div id="processing-overlay" class="overlay hidden">
+        <div class="overlay-content">
+            <h2>Processing Documents...</h2>
+            <p id="overlay-step">Uploading files...</p>
+            <div class="overlay-progress"><div class="overlay-progress-bar" id="overlay-bar" style="width:0%"></div></div>
+            <p class="overlay-pct" id="overlay-pct">0%</p>
+        </div>
+    </div>
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE: Review                                                           -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<main id="page-review" style="display:none">
+    <div class="review-toolbar">
+        <div class="toolbar-left"><h2>Review</h2><span class="sar-ref" id="review-sar-ref"></span></div>
+        <div class="toolbar-centre">
+            <select id="file-selector" class="toolbar-select" onchange="switchFile(this.value)"></select>
+            <span class="toolbar-divider"></span>
+            <button class="btn-sm" onclick="prevPage()" id="btn-prev" disabled>&lsaquo; Prev</button>
+            <span id="page-indicator">Page 1 / ?</span>
+            <button class="btn-sm" onclick="nextPage()" id="btn-next">Next &rsaquo;</button>
+            <span class="toolbar-divider"></span>
+            <div class="zoom-controls">
+                <button onclick="zoomOut()" title="Zoom out">&minus;</button>
+                <span id="zoom-level">Fit</span>
+                <button onclick="zoomIn()" title="Zoom in">+</button>
+                <button onclick="zoomFit()" title="Fit to panel">Fit</button>
+            </div>
+        </div>
+        <div class="toolbar-right">
+            <select id="filter-select" class="toolbar-select" onchange="applyFilter(this.value)">
+                <option value="all">All</option><option value="flagged">Flagged</option>
+                <option value="auto_redact">Auto-Redact</option><option value="redacting">All Redacting</option>
+                <option value="excluded">Excluded</option>
+            </select>
+            <span class="toolbar-divider"></span>
+            <button id="btn-draw-mode" class="btn-draw-mode" onclick="toggleDrawMode()" title="Draw a manual redaction box">Draw</button>
+            <span class="toolbar-divider"></span>
+            <button class="btn btn-primary" onclick="showConfirmModal()">Finalise &amp; Download</button>
+        </div>
+    </div>
+
+    <div class="review-layout">
+        <div class="review-pdf-panel">
+            <div id="page-container" class="page-container"></div>
+        </div>
+        <div class="review-sidebar">
+            <div class="review-progress" id="review-progress">
+                <div class="progress-text"><span id="progress-label">0 of 0 reviewed</span><span id="progress-pct">0%</span></div>
+                <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+            </div>
+            <div class="sidebar-header">
+                <div class="sidebar-stats" id="sidebar-stats"></div>
+                <div class="sidebar-actions">
+                    <button class="btn-sm btn-sm-approve" onclick="batchAction('approve_all','flagged')">Approve All Flagged</button>
+                    <button class="btn-sm btn-sm-reject" onclick="batchAction('reject_all','flagged')">Reject All Flagged</button>
+                    <button class="btn-sm btn-sm-page" onclick="approveAllOnPage()" title="Approve all flagged on this page">Approve Page</button>
+                </div>
+            </div>
+            <div class="search-panel">
+                <input type="text" id="search-input" class="search-input" placeholder="Search across all pages... (/)" oninput="performSearch(this.value.trim())"/>
+                <div id="search-results" class="search-results hidden"></div>
+            </div>
+            <div id="candidate-list" class="candidate-list"></div>
+            <div class="notes-panel">
+                <div class="notes-panel-label">Notes</div>
+                <textarea id="notes-textarea" class="notes-textarea" placeholder="Add case notes..."></textarea>
+                <div class="notes-saved" id="notes-saved">Saved</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finalise overlay -->
+    <div id="finalise-overlay" class="overlay hidden">
+        <div class="overlay-content"><h2>Applying Redactions...</h2><p>Generating redacted PDFs and log file.</p>
+            <div class="overlay-progress" style="margin-top:1.25rem;"><div class="overlay-progress-bar overlay-progress-indeterminate"></div></div>
+        </div>
+    </div>
+    <!-- Confirm overlay -->
+    <div id="confirm-overlay" class="overlay hidden">
+        <div class="overlay-content confirm-modal">
+            <h2>Confirm Finalisation</h2>
+            <div class="confirm-summary" id="confirm-summary"></div>
+            <div id="confirm-warning"></div>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" onclick="hideConfirmModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="proceedFinalise()">Finalise &amp; Download</button>
+            </div>
+        </div>
+    </div>
+    <!-- Shortcuts overlay -->
+    <div id="shortcuts-overlay" class="overlay hidden">
+        <div class="overlay-content shortcuts-modal">
+            <h2>Keyboard Shortcuts</h2>
+            <div class="shortcuts-grid">
+                <div class="shortcut-group"><h3>Navigation</h3>
+                    <div class="shortcut-row"><kbd>j</kbd> / <kbd>&darr;</kbd> <span>Next candidate</span></div>
+                    <div class="shortcut-row"><kbd>k</kbd> / <kbd>&uarr;</kbd> <span>Previous candidate</span></div>
+                    <div class="shortcut-row"><kbd>&rarr;</kbd> <span>Next page</span></div>
+                    <div class="shortcut-row"><kbd>&larr;</kbd> <span>Previous page</span></div>
+                </div>
+                <div class="shortcut-group"><h3>Actions</h3>
+                    <div class="shortcut-row"><kbd>a</kbd> <span>Redact / undo</span></div>
+                    <div class="shortcut-row"><kbd>x</kbd> <span>Keep / undo</span></div>
+                </div>
+                <div class="shortcut-group"><h3>Tools</h3>
+                    <div class="shortcut-row"><kbd>d</kbd> <span>Toggle draw mode</span></div>
+                    <div class="shortcut-row"><kbd>f</kbd> <span>Cycle filter</span></div>
+                    <div class="shortcut-row"><kbd>?</kbd> <span>Shortcuts</span></div>
+                    <div class="shortcut-row"><kbd>Esc</kbd> <span>Close / exit</span></div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="toggleShortcutsOverlay()">Close</button>
+        </div>
+    </div>
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE: Complete                                                         -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<main id="page-complete" class="container" style="display:none">
+    <div class="complete-hero">
+        <div class="complete-art">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" style="image-rendering:pixelated;image-rendering:crisp-edges;display:block;margin:0 auto;">
+              <rect x="10" y="0" width="60" height="5" fill="#d4edda"/><rect x="5" y="5" width="70" height="5" fill="#d4edda"/>
+              <rect x="0" y="10" width="80" height="60" fill="#d4edda"/><rect x="5" y="70" width="70" height="5" fill="#d4edda"/>
+              <rect x="10" y="75" width="60" height="5" fill="#d4edda"/>
+              <rect x="15" y="40" width="5" height="5" fill="#248a3d"/><rect x="20" y="45" width="5" height="5" fill="#248a3d"/>
+              <rect x="25" y="50" width="5" height="5" fill="#248a3d"/><rect x="30" y="55" width="5" height="5" fill="#248a3d"/>
+              <rect x="35" y="50" width="5" height="5" fill="#248a3d"/><rect x="40" y="45" width="5" height="5" fill="#248a3d"/>
+              <rect x="45" y="40" width="5" height="5" fill="#248a3d"/><rect x="50" y="35" width="5" height="5" fill="#248a3d"/>
+              <rect x="55" y="30" width="5" height="5" fill="#248a3d"/><rect x="60" y="25" width="5" height="5" fill="#248a3d"/>
+            </svg>
+        </div>
+        <h1>Redaction Complete</h1>
+        <div class="complete-subject" id="complete-subject"></div>
+        <p class="complete-meta" id="complete-ref"></p>
+        <div class="complete-stats">
+            <div class="complete-stat-item"><span class="complete-stat-num stat-redact" id="complete-stat-redacted">0</span><span class="complete-stat-lbl">Redacted</span></div>
+            <div class="complete-stat-item"><span class="complete-stat-num stat-kept" id="complete-stat-kept">0</span><span class="complete-stat-lbl">Kept</span></div>
+            <div class="complete-stat-item"><span class="complete-stat-num stat-excl" id="complete-stat-excluded">0</span><span class="complete-stat-lbl">Excluded</span></div>
+        </div>
+    </div>
+    <div id="download-links" class="download-grid"></div>
+    <div class="form-actions" style="justify-content:center;margin-top:2rem;">
+        <a href="#" class="btn btn-secondary" onclick="navigate('dashboard');return false;">Back to Dashboard</a>
+        <a href="#" class="btn btn-primary" onclick="navigate('new');return false;">New SAR Request</a>
+    </div>
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PAGE: Staff / Settings                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<main id="page-staff" class="container" style="display:none">
+    <div class="page-header">
+        <h1>Settings</h1><div class="heading-rule"></div>
+        <p style="margin-top:0.6rem;">Manage staff exclusions and custom redaction rules.</p>
+    </div>
+    <div class="settings-section">
+        <div class="settings-section-header"><h2>Staff List</h2><p>Names on this list are <strong>excluded</strong> from redaction. Add all practice staff here.</p></div>
+        <div class="settings-add-form">
+            <input type="text" id="staff-name" placeholder="Full name (e.g. Dr Jane Smith)">
+            <input type="text" id="staff-role" placeholder="Role (optional)" style="max-width:200px;">
+            <button type="button" class="btn-sm btn-sm-primary" onclick="submitAddStaff()">Add</button>
+        </div>
+        <ul class="settings-list" id="staff-list"><li class="settings-empty" id="staff-empty">No staff members added yet.</li></ul>
+    </div>
+    <div class="settings-section">
+        <div class="settings-section-header"><h2>Custom Redaction Words</h2><p>Words or phrases listed here are <strong>always auto-redacted</strong> in every document.</p></div>
+        <div class="settings-add-form">
+            <input type="text" id="word-phrase" placeholder="Word or phrase to always redact" style="flex:2;">
+            <label class="inline-checkbox"><input type="checkbox" id="word-case-sensitive"> Case sensitive</label>
+            <button type="button" class="btn-sm btn-sm-primary" onclick="submitAddWord()">Add</button>
+        </div>
+        <ul class="settings-list" id="words-list"><li class="settings-empty" id="words-empty">No custom redaction words added yet.</li></ul>
+    </div>
+</main>
+
+<!-- ─── Scripts ────────────────────────────────────────────────────────── -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="js/core/models.js"></script>
+<script src="js/core/nhs-patterns.js"></script>
+<script src="js/core/name-detector.js"></script>
+<script src="js/core/detector.js"></script>
+<script src="js/core/pdf-engine.js"></script>
+<script src="js/core/redactor.js"></script>
+<script src="js/core/audit-log.js"></script>
+<script src="js/core/storage.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
