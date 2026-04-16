@@ -6,6 +6,7 @@ import json
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 from sar.models import User
+from sar import atomic_json_save
 
 USERS_PATH = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "data", "users.json"
@@ -20,9 +21,7 @@ def _load_users() -> list[dict]:
 
 
 def _save_users(users: list[dict]) -> None:
-    os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
-    with open(USERS_PATH, "w", encoding="utf-8") as f:
-        json.dump(users, f, indent=2)
+    atomic_json_save(USERS_PATH, users)
 
 
 def _user_from_dict(d: dict) -> User:

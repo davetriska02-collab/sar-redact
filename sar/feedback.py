@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
+from sar import atomic_json_save
 
 _DATA_PATH = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "data", "feedback.json"
@@ -16,9 +17,7 @@ def _load() -> list[dict]:
 
 
 def _save(items: list[dict]) -> None:
-    os.makedirs(os.path.dirname(_DATA_PATH), exist_ok=True)
-    with open(_DATA_PATH, "w", encoding="utf-8") as f:
-        json.dump(items, f, indent=2)
+    atomic_json_save(_DATA_PATH, items)
 
 
 def submit_feedback(

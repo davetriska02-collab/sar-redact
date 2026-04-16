@@ -1,5 +1,6 @@
 import json
 import os
+from sar import atomic_json_save
 
 _DATA_PATH = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "data", "custom_words.json"
@@ -14,9 +15,7 @@ def _load() -> list[dict]:
 
 
 def _save(words: list[dict]) -> None:
-    os.makedirs(os.path.dirname(_DATA_PATH), exist_ok=True)
-    with open(_DATA_PATH, "w", encoding="utf-8") as f:
-        json.dump(words, f, indent=2)
+    atomic_json_save(_DATA_PATH, words)
 
 
 def get_custom_words() -> list[dict]:

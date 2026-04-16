@@ -38,6 +38,7 @@ from sar.redaction_log import generate_redaction_log
 from sar.staff_list import get_staff_list, add_staff_member, remove_staff_member
 from sar.custom_words import get_custom_words, add_custom_word, remove_custom_word
 from sar.risk_words import check_text_for_risk
+from sar import atomic_json_save
 from sar.feedback import submit_feedback, get_all_feedback, delete_feedback
 from sar.date_extractor import extract_document_date, extract_date_from_filename
 from sar.keyword_scanner import scan_keywords
@@ -296,20 +297,25 @@ def _convert_cdax_to_pdf(cdax_path: str) -> str:
 
 def _convert_single_file(filepath: str, ext: str) -> str:
     """Convert a single file to PDF based on extension. Returns the PDF path."""
-    if ext in ("tif", "tiff"):
-        return _convert_tif_to_pdf(filepath)
-    elif ext == "rtf":
-        return _convert_rtf_to_pdf(filepath)
-    elif ext == "txt":
-        return _convert_txt_to_pdf(filepath)
-    elif ext in ("png", "jpg", "jpeg"):
-        return _convert_image_to_pdf(filepath)
-    elif ext in ("html", "htm"):
-        return _convert_html_to_pdf(filepath)
-    elif ext == "cdax":
-        return _convert_cdax_to_pdf(filepath)
-    else:
+    converters = {
+        "tif": _convert_tif_to_pdf,
+        "tiff": _convert_tif_to_pdf,
+        "rtf": _convert_rtf_to_pdf,
+        "txt": _convert_txt_to_pdf,
+        "png": _convert_image_to_pdf,
+        "jpg": _convert_image_to_pdf,
+        "jpeg": _convert_image_to_pdf,
+        "html": _convert_html_to_pdf,
+        "htm": _convert_html_to_pdf,
+        "cdax": _convert_cdax_to_pdf,
+    }
+    converter = converters.get(ext)
+    if not converter:
         return filepath  # PDF — no conversion needed
+    try:
+        return converter(filepath)
+    except Exception as e:
+        raise RuntimeError(f"Failed to convert {os.path.basename(filepath)} ({ext}→PDF): {e}") from e
 
 
 def _extract_zip_to_pdfs(zip_path: str, sar_dir: str, emit_fn=None) -> list[str]:
@@ -430,8 +436,7 @@ def _save_sar(sar: SARRequest) -> None:
         ],
     }
     path = os.path.join(SAR_DATA_DIR, f"{sar.id}.json")
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
+    atomic_json_save(path, data)
 
 
 def _load_all_sars() -> None:
@@ -1022,7 +1027,10 @@ def page_image(sar_id, filename, page_num):
     if not pdf_path:
         return "File not found", 404
 
-    img_bytes = render_page_image(pdf_path, page_num, zoom=2.0)
+    try:
+        img_bytes = render_page_image(pdf_path, page_num, zoom=2.0)
+    except Exception:
+        return "Could not render page", 500
     return Response(img_bytes, mimetype="image/png")
 
 
@@ -1054,9 +1062,15 @@ def update_candidate(sar_id, candidate_id):
 
     data = request.json
     if "status" in data:
-        candidate.status = RedactionStatus(data["status"])
+        try:
+            candidate.status = RedactionStatus(data["status"])
+        except ValueError:
+            return jsonify({"error": f"Invalid status: {data['status']}"}), 400
     if "category" in data:
-        candidate.category = PIICategory(data["category"])
+        try:
+            candidate.category = PIICategory(data["category"])
+        except ValueError:
+            return jsonify({"error": f"Invalid category: {data['category']}"}), 400
     if "reason" in data:
         candidate.reason = data["reason"]
     if "exemption_code" in data:
@@ -2168,7 +2182,10 @@ def generate_report(report_id):
         return jsonify({"error": "Not found"}), 404
 
     output_dir = os.path.join(REPORT_OUTPUT_DIR, report_id)
-    output_path = generate_report_pdf(report, output_dir)
+    try:
+        output_path = generate_report_pdf(report, output_dir)
+    except Exception as e:
+        return jsonify({"error": f"Failed to generate report: {e}"}), 500
 
     report["status"] = "complete"
     save_report(report)
@@ -2198,7 +2215,10 @@ def report_page_image(report_id, filename, page_num):
     pdf_path = os.path.join(report_dir, safe)
     if not os.path.exists(pdf_path):
         return "File not found", 404
-    img = render_page_image(pdf_path, page_num)
+    try:
+        img = render_page_image(pdf_path, page_num)
+    except Exception:
+        return "Could not render page", 500
     return Response(img, mimetype="image/png")
 
 

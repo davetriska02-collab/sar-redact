@@ -1,5 +1,6 @@
 import json
 import os
+from sar import atomic_json_save
 
 STAFF_LIST_PATH = os.path.join(
     os.path.dirname(os.path.dirname(__file__)), "data", "staff_list.json"
@@ -14,9 +15,7 @@ def _load_staff() -> list[dict]:
 
 
 def _save_staff(staff: list[dict]):
-    os.makedirs(os.path.dirname(STAFF_LIST_PATH), exist_ok=True)
-    with open(STAFF_LIST_PATH, "w") as f:
-        json.dump(staff, f, indent=2)
+    atomic_json_save(STAFF_LIST_PATH, staff)
 
 
 def get_staff_list() -> list[dict]:

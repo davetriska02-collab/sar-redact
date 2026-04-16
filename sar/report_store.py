@@ -2,6 +2,7 @@
 import json
 import os
 from datetime import datetime, timezone
+from sar import atomic_json_save
 
 REPORT_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "reports")
 os.makedirs(REPORT_DATA_DIR, exist_ok=True)
@@ -10,8 +11,7 @@ os.makedirs(REPORT_DATA_DIR, exist_ok=True)
 def save_report(report_data: dict) -> None:
     report_data["last_modified"] = datetime.now(timezone.utc).isoformat()
     path = os.path.join(REPORT_DATA_DIR, f"{report_data['id']}.json")
-    with open(path, "w") as f:
-        json.dump(report_data, f, indent=2)
+    atomic_json_save(path, report_data)
 
 
 def load_report(report_id: str) -> dict | None:

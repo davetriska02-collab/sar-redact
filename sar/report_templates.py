@@ -1,6 +1,7 @@
 """Template management for medical reports. Built-in + custom templates."""
 import json
 import os
+from sar import atomic_json_save
 
 TEMPLATES_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "report_templates.json")
 
@@ -223,8 +224,7 @@ def save_custom_template(template: dict) -> None:
         with open(TEMPLATES_PATH) as f:
             custom = json.load(f)
     custom.append(template)
-    with open(TEMPLATES_PATH, "w") as f:
-        json.dump(custom, f, indent=2)
+    atomic_json_save(TEMPLATES_PATH, custom)
 
 
 def update_custom_template(template_id: str, updates: dict) -> bool:
@@ -250,6 +250,5 @@ def delete_custom_template(template_id: str) -> bool:
     custom = [t for t in custom if t["id"] != template_id]
     if len(custom) == before:
         return False
-    with open(TEMPLATES_PATH, "w") as f:
-        json.dump(custom, f, indent=2)
+    atomic_json_save(TEMPLATES_PATH, custom)
     return True
