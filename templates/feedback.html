@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Feedback — SAR Redact{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Feedback</h1>
+    <div class="heading-rule"></div>
+    <p style="margin-top: 0.6rem;">Let us know about bugs, suggestions, or anything else. Your feedback is private and only visible to the admin team.</p>
+</div>
+
+<div id="feedback-success" class="hidden" style="text-align:center;padding:3rem 1rem;">
+    <div style="font-size:2rem;margin-bottom:0.75rem;">&#10003;</div>
+    <h2 style="margin-bottom:0.5rem;">Thank you for your feedback</h2>
+    <p style="color:var(--text-secondary);">Your feedback has been submitted and will be reviewed by the admin team.</p>
+    <a href="/" class="btn btn-primary" style="margin-top:1.5rem;">Back to Dashboard</a>
+</div>
+
+<div id="feedback-form-wrap">
+    <div class="form-card">
+        <div class="form-card-title">Submit Feedback</div>
+        <div class="form-grid" style="grid-template-columns:1fr;">
+            <div class="form-group">
+                <label for="feedback-type">Type</label>
+                <select id="feedback-type" class="toolbar-select" style="width:100%;padding:0.6rem 0.75rem;font-size:0.9rem;">
+                    <option value="bug">Bug Report</option>
+                    <option value="suggestion">Suggestion</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="feedback-description">Description <span class="required">*</span></label>
+                <textarea id="feedback-description" rows="6" style="width:100%;padding:0.6rem 0.75rem;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-family:var(--font);font-size:0.9rem;resize:vertical;" placeholder="Please describe the issue or suggestion in as much detail as possible..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="feedback-contact">Contact (optional)</label>
+                <input type="text" id="feedback-contact" placeholder="Your email or phone if you'd like a response" style="width:100%;">
+            </div>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-primary" onclick="submitFeedback()">Submit Feedback</button>
+        <a href="/" class="btn btn-secondary">Cancel</a>
+    </div>
+    <div id="feedback-error" class="hidden" style="color:var(--red);text-align:center;margin-top:1rem;"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function submitFeedback() {
+    const description = document.getElementById('feedback-description').value.trim();
+    const feedbackType = document.getElementById('feedback-type').value;
+    const contact = document.getElementById('feedback-contact').value.trim();
+    const errorEl = document.getElementById('feedback-error');
+    errorEl.classList.add('hidden');
+
+    if (!description) {
+        errorEl.textContent = 'Please enter a description.';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: feedbackType, description, contact }),
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || 'Failed to submit feedback');
+        }
+        document.getElementById('feedback-form-wrap').classList.add('hidden');
+        document.getElementById('feedback-success').classList.remove('hidden');
+    } catch (err) {
+        errorEl.textContent = 'Error: ' + err.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+</script>
+{% endblock %}

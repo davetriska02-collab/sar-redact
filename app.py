@@ -38,6 +38,7 @@ from sar.redaction_log import generate_redaction_log
 from sar.staff_list import get_staff_list, add_staff_member, remove_staff_member
 from sar.custom_words import get_custom_words, add_custom_word, remove_custom_word
 from sar.risk_words import check_text_for_risk
+from sar.feedback import submit_feedback, get_all_feedback, delete_feedback
 from sar.date_extractor import extract_document_date, extract_date_from_filename
 from sar.keyword_scanner import scan_keywords
 from sar.users import (
@@ -1683,18 +1684,26 @@ def delete_page(sar_id):
         return jsonify({"error": "File not found"}), 404
 
     import fitz
-    doc = fitz.open(pdf_path)
-    total = len(doc)
-    if page_num is None or page_num < 0 or page_num >= total:
+    try:
+        doc = fitz.open(pdf_path)
+    except Exception as e:
+        return jsonify({"error": f"Could not open PDF: {e}"}), 500
+
+    try:
+        total = len(doc)
+        if page_num is None or not isinstance(page_num, int) or page_num < 0 or page_num >= total:
+            return jsonify({"error": "Invalid page number"}), 400
+
+        doc.delete_page(page_num)
+        doc.save(pdf_path, incremental=False)
+        new_page_count = len(doc)
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"error": f"Failed to delete page: {e}"}), 500
+    finally:
         doc.close()
-        return jsonify({"error": "Invalid page number"}), 400
 
-    doc.delete_page(page_num)
-    doc.save(pdf_path, incremental=False)
-    new_page_count = len(doc)
-    doc.close()
-
-    # Drop candidates on the deleted page; shift later pages down
+    # Only update SAR metadata AFTER PDF save succeeds
     sar.candidates = [
         c for c in sar.candidates
         if not (c.source_file == filename and c.page_num == page_num)
@@ -2246,6 +2255,54 @@ def delete_template_route(template_id):
         return jsonify({"error": "Cannot delete built-in templates"}), 400
     if not delete_custom_template(template_id):
         return jsonify({"error": "Not found or is built-in"}), 404
+    return jsonify({"ok": True})
+
+
+# ─── Feedback ─────────────────────────────────────────────────────────────────
+
+@app.route("/feedback")
+@require_login
+def feedback_page():
+    return render_template("feedback.html")
+
+
+@app.route("/admin/feedback")
+@require_admin
+def admin_feedback_page():
+    return render_template("admin/feedback.html")
+
+
+@app.route("/api/feedback", methods=["POST"])
+@require_login
+def post_feedback():
+    data = request.json or {}
+    feedback_type = data.get("type", "other").strip()
+    description = data.get("description", "").strip()
+    if not description:
+        return jsonify({"error": "Description is required"}), 400
+    if feedback_type not in ("bug", "suggestion", "other"):
+        feedback_type = "other"
+    entry = submit_feedback(
+        feedback_type=feedback_type,
+        description=description,
+        contact=data.get("contact", "").strip(),
+        submitted_by=g.current_user.id,
+        submitted_by_name=g.current_user.display_name,
+    )
+    return jsonify({"ok": True, "id": entry["id"]})
+
+
+@app.route("/api/feedback", methods=["GET"])
+@require_admin
+def list_feedback():
+    return jsonify(get_all_feedback())
+
+
+@app.route("/api/feedback/<feedback_id>", methods=["DELETE"])
+@require_admin
+def remove_feedback(feedback_id):
+    if not delete_feedback(feedback_id):
+        return jsonify({"error": "Not found"}), 404
     return jsonify({"ok": True})
 
 

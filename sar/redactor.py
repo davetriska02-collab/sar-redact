@@ -4,6 +4,11 @@ import os
 from datetime import date
 from sar.models import RedactionCandidate, RedactionStatus
 
+# Padding added to redaction rectangles to prevent glyph clipping at edges.
+# PyMuPDF bbox values can underestimate rendered width due to font metrics.
+_REDACT_PAD_RIGHT = 2.0    # PDF points (~0.7mm)
+_REDACT_PAD_BOTTOM = 1.0   # PDF points (~0.35mm)
+
 
 def _stamp_page(page: fitz.Page, doc_name: str) -> None:
     """Add a diagonal 'REDACTED' watermark and footer stamp to each page."""
@@ -68,7 +73,8 @@ def apply_redactions(
         for c in page_candidates:
             if c.x0 > 0 and c.y0 > 0 and c.x1 > 0 and c.y1 > 0:
                 # We have coordinates from span mapping
-                rect = fitz.Rect(c.x0, c.y0, c.x1, c.y1)
+                rect = fitz.Rect(c.x0, c.y0, c.x1 + _REDACT_PAD_RIGHT, c.y1 + _REDACT_PAD_BOTTOM)
+                rect = rect & page.rect
                 page.add_redact_annot(
                     rect,
                     text="[REDACTED]",
@@ -80,8 +86,10 @@ def apply_redactions(
                 # Fallback: search for the text on the page
                 instances = page.search_for(c.text)
                 for inst in instances:
+                    padded = fitz.Rect(inst.x0, inst.y0, inst.x1 + _REDACT_PAD_RIGHT, inst.y1 + _REDACT_PAD_BOTTOM)
+                    padded = padded & page.rect
                     page.add_redact_annot(
-                        inst,
+                        padded,
                         text="[REDACTED]",
                         fontsize=7,
                         fill=(0, 0, 0),

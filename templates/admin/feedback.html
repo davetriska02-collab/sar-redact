@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}View Feedback — SAR Redact{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>User Feedback</h1>
+    <div class="heading-rule"></div>
+    <p style="margin-top: 0.6rem;">Feedback submitted by users. Only admins can view this page.</p>
+</div>
+
+<div class="settings-section">
+    <div class="settings-section-title">All Feedback</div>
+    <div id="feedback-loading" style="text-align:center;padding:2rem;color:var(--text-secondary);">Loading…</div>
+    <div id="feedback-empty" class="hidden" style="text-align:center;padding:2rem;color:var(--text-secondary);">No feedback has been submitted yet.</div>
+    <table id="feedback-table" class="users-table hidden">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Submitted by</th>
+                <th>Contact</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="feedback-tbody"></tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const typeBadgeColors = {
+    bug: 'var(--red)',
+    suggestion: 'var(--gold)',
+    other: 'var(--text-secondary)',
+};
+
+function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+async function loadFeedback() {
+    try {
+        const resp = await fetch('/api/feedback');
+        if (!resp.ok) throw new Error('Failed to load');
+        const items = await resp.json();
+        document.getElementById('feedback-loading').classList.add('hidden');
+
+        if (items.length === 0) {
+            document.getElementById('feedback-empty').classList.remove('hidden');
+            return;
+        }
+
+        items.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
+        const tbody = document.getElementById('feedback-tbody');
+        tbody.innerHTML = items.map(f => `
+            <tr id="row-${f.id}">
+                <td style="white-space:nowrap;font-size:0.8rem;color:var(--text-secondary);">${formatDate(f.created_at)}</td>
+                <td><span style="display:inline-block;padding:0.15rem 0.5rem;border-radius:var(--radius-sm);font-size:0.75rem;font-weight:600;border:1px solid ${typeBadgeColors[f.type] || typeBadgeColors.other};color:${typeBadgeColors[f.type] || typeBadgeColors.other};">${escapeHtml(f.type)}</span></td>
+                <td style="max-width:400px;white-space:pre-wrap;font-size:0.85rem;">${escapeHtml(f.description)}</td>
+                <td style="font-size:0.85rem;">${escapeHtml(f.submitted_by_name || f.submitted_by || '—')}</td>
+                <td style="font-size:0.85rem;">${f.contact ? escapeHtml(f.contact) : '—'}</td>
+                <td>
+                    <button class="btn" style="font-size:0.75rem;color:var(--red);border-color:rgba(255,59,48,0.3);"
+                            onclick="deleteFeedback('${f.id}')">Delete</button>
+                </td>
+            </tr>
+        `).join('');
+
+        document.getElementById('feedback-table').classList.remove('hidden');
+    } catch (err) {
+        document.getElementById('feedback-loading').textContent = 'Error loading feedback.';
+    }
+}
+
+async function deleteFeedback(id) {
+    if (!confirm('Delete this feedback entry?')) return;
+    try {
+        const resp = await fetch('/api/feedback/' + id, { method: 'DELETE' });
+        if (!resp.ok) throw new Error('Failed to delete');
+        const row = document.getElementById('row-' + id);
+        if (row) row.remove();
+        if (document.getElementById('feedback-tbody').children.length === 0) {
+            document.getElementById('feedback-table').classList.add('hidden');
+            document.getElementById('feedback-empty').classList.remove('hidden');
+        }
+    } catch (err) {
+        alert('Error deleting feedback: ' + err.message);
+    }
+}
+
+loadFeedback();
+</script>
+{% endblock %}
